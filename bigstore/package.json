@@ -1,0 +1,16 @@
+{
+  "name": "platform-bigstore",
+  "version": "1.0.0",
+  "description": "Internal isolated storage service for the platform",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "migrate": "node src/migrate.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

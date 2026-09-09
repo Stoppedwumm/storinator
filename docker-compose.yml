@@ -1,0 +1,91 @@
+services:
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: platform-webapp
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"
+    networks:
+      - frontend_net
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: platform-backend
+    restart: unless-stopped
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - APP_URL=${APP_URL:-http://localhost:8080}
+      - ENTRY_CODE=${ENTRY_CODE:-anticipation2026}
+      - SESSION_SECRET=${SESSION_SECRET:-dev_session_secret_change_in_production_32bytes_min}
+      - INTERNAL_BIGSTORE_SECRET=${INTERNAL_BIGSTORE_SECRET:-dev_bigstore_secret_change_in_production_32bytes_min}
+      - BIGSTORE_URL=${BIGSTORE_URL:-http://bigstore:8080}
+      - SQLITE_BACKEND_PATH=${SQLITE_BACKEND_PATH:-/data/backend.sqlite}
+      - DEFAULT_STORAGE_QUOTA_BYTES=${DEFAULT_STORAGE_QUOTA_BYTES:-53687091200}
+      - MAX_UPLOAD_SIZE=${MAX_UPLOAD_SIZE:-5368709120}
+    volumes:
+      - backend-data:/data
+    networks:
+      - frontend_net
+      - backend_net
+    depends_on:
+      bigstore:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  bigstore:
+    build:
+      context: ./bigstore
+      dockerfile: Dockerfile
+    container_name: platform-bigstore
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${APP_ENV:-development}
+      - PORT=8080
+      - INTERNAL_BIGSTORE_SECRET=${INTERNAL_BIGSTORE_SECRET:-dev_bigstore_secret_change_in_production_32bytes_min}
+      - SQLITE_BIGSTORE_PATH=${SQLITE_BIGSTORE_PATH:-/data/databases/bigstore.sqlite}
+      - BIGSTORE_STORAGE_ROOT=${BIGSTORE_STORAGE_ROOT:-/data/files}
+      - DEFAULT_STORAGE_QUOTA_BYTES=${DEFAULT_STORAGE_QUOTA_BYTES:-53687091200}
+    volumes:
+      - bigstore-data:/data/databases
+      - bigstore-files:/data/files
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const http=require('http'); http.get({host:'127.0.0.1',port:8080,path:'/internal/health',headers:{'X-Internal-Service-Token':process.env.INTERNAL_BIGSTORE_SECRET||''}},(r)=>{process.exit(r.statusCode===200?0:1);}).on('error',()=>process.exit(1));\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  frontend_net:
+    driver: bridge
+  backend_net:
+    driver: bridge
+    internal: true
+
+volumes:
+  backend-data:
+    driver: local
+  bigstore-data:
+    driver: local
+  bigstore-files:
+    driver: local

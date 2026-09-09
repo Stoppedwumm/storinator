@@ -1,0 +1,107 @@
+# File Sharing / Store Platform — Master Project Plan
+
+## 1. System Architecture Overview
+
+```text
+                               Public Internet
+                                      |
+                                      v
+             +--------------------------------------------------+
+             |                 Webapp (Nginx)                   |
+             |  - Static Assets (Webpack Bundle, HTML5/CSS/JS)   |
+             |  - Reverse Proxy for /api/*                      |
+             |  - Port 80 (external: ${PORT:-8080})             |
+             +--------------------------------------------------+
+                                      |
+                           (Docker frontend_net)
+                                      |
+                                      v
+             +--------------------------------------------------+
+             |                  Backend (PHP)                   |
+             |  - PHP 8.4+ Built-in Server / FPM (:8000)        |
+             |  - REST-style JSON API                           |
+             |  - Centralized Auth & Business Rules             |
+             |  - SQLite Database (/data/backend.sqlite)        |
+             +--------------------------------------------------+
+                                      |
+                           (Docker backend_net)
+                         (X-Internal-Service-Token)
+                                      |
+                                      v
+             +--------------------------------------------------+
+             |                 BigStore (Node)                  |
+             |  - Node.js 24 + Express (:8080)                  |
+             |  - Storage, Range Streaming, Quota Accounting    |
+             |  - Chunked Upload Assembly                       |
+             |  - SQLite Database (/data/databases/bigstore.db) |
+             +--------------------------------------------------+
+```
+
+### Network Isolation Policy
+- **External -> Webapp**: Host port mapped to Nginx container.
+- **Webapp -> Backend**: Routed internally via `frontend_net`. BigStore is NOT on `frontend_net`.
+- **Backend -> BigStore**: Routed internally via `backend_net` using authenticated secret tokens.
+- **Webapp -> BigStore**: Direct communication is physically impossible via network isolation.
+
+---
+
+## 2. Phase-by-Phase Roadmap
+
+| Phase | Milestone | Scope / Key Deliverables | Status |
+|:------|:----------|:-------------------------|:-------|
+| **Phase 1** | **Foundation** | Repo structure, Dockerfiles, Docker Compose, Webpack setup, minimal PHP backend, minimal BigStore service, separate SQLite DBs, internal network isolation, health endpoints, reverse-proxy routing, migration runners, health tests, README. | **COMPLETED** |
+| **Phase 2** | Authentication | Users, Roles (CUSTOMER, PARTNER, ADMIN), Argon2id passwords, Sessions, centralized AuthMiddleware, initial admin seed. | Up Next |
+| **Phase 3** | Landing Page | Corporate minimal teaser website, secret access code input in search bar, server-side code validation, session unlock to login. | Pending |
+| **Phase 4** | BigStore Core | Physical hashed storage paths, directory trees, file metadata, chunked streaming uploads, checksums, quota validation. | Pending |
+| **Phase 5** | Subscriptions | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates, renewal billing against partner. | Pending |
+| **Phase 6** | Wallet & Ledger | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | Pending |
+| **Phase 7** | Partner Billing | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | Pending |
+| **Phase 8** | File Sharing | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | Pending |
+| **Phase 9** | Movie Mode & Streaming | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | Pending |
+| **Phase 10** | Storefronts | Multi-store partner management, slugs, branding, categories, product variants, inventory, BigStore asset storage. | Pending |
+| **Phase 11** | Cart & Orders | Persistent cart, atomic balance deduction, inventory reservation, immutable order snapshots, invoice generation. | Pending |
+| **Phase 12** | Store Accounts | Store-specific employee roles (STORE_OWNER, STORE_MANAGER, STORE_STAFF, STORE_SUPPORT) and scoped permissions. | Pending |
+| **Phase 13** | Public Directory | Curated directory of files, movies, and collections with admin visibility toggles and custom covers. | Pending |
+| **Phase 14** | Admin System | Complete administrative control over users, stores, billing, storage anomalies, audit logs, and system settings. | Pending |
+| **Phase 15** | Hardening & Audit | Security audit (IDOR, race conditions, CSRF/XSS, path traversal), backup/restore drills, end-to-end acceptance verification. | Pending |
+
+---
+
+## 3. Phase 1 Detailed Deliverables & Checklist
+
+- [x] Master Project Plan (`PROJECT_PLAN.md`)
+- [x] Mandatory Operating Rules (`AGENTS.md`)
+- [x] Environment configuration template (`.env.example` & `.env`)
+- [x] Docker Compose multi-service architecture with dual networks (`docker-compose.yml`)
+- [x] Frontend project (`webapp/`):
+  - [x] Webpack configuration bundling JS and CSS (`webapp/webpack.config.js`, `webapp/package.json`)
+  - [x] Source HTML and modular CSS design tokens (`webapp/src/`)
+  - [x] Nginx configuration serving frontend and proxying `/api/*` (`webapp/nginx.conf`)
+  - [x] Webapp Dockerfile with multi-stage build (`webapp/Dockerfile`)
+- [x] Backend project (`backend/`):
+  - [x] Composer configuration with PSR-4 autoloading (`backend/composer.json`)
+  - [x] Front controller and core routing (`backend/public/index.php`, `backend/src/Core/`)
+  - [x] Health endpoint checking database and BigStore internal connectivity (`backend/src/Controllers/HealthController.php`)
+  - [x] SQLite database connection with WAL mode (`backend/src/Core/Database.php`)
+  - [x] Migration runner and initial migration `001_initial.sql`
+  - [x] BigStore HTTP client (`backend/src/BigStore/BigStoreClient.php`)
+  - [x] Backend Dockerfile (`backend/Dockerfile`)
+- [x] BigStore project (`bigstore/`):
+  - [x] Express server on internal port 8080 (`bigstore/src/server.js`)
+  - [x] SQLite connection with WAL mode (`bigstore/src/database.js`)
+  - [x] Internal token authentication middleware (`bigstore/src/security.js`)
+  - [x] Internal health endpoint (`GET /internal/health`)
+  - [x] Storage directory hierarchy initializers
+  - [x] Migration runner and initial migration `001_initial.sql`
+  - [x] BigStore Dockerfile (`bigstore/Dockerfile`)
+- [x] Scripts:
+  - [x] Backup script (`scripts/backup.sh`)
+  - [x] Restore script (`scripts/restore.sh`)
+  - [x] Automated health test script (`scripts/test-health.sh`)
+- [x] Master documentation (`README.md`)
+- [x] Acceptance verification:
+  - [x] Containers build and start via `docker compose up --build`
+  - [x] Health endpoints return 200 OK across all services
+  - [x] Frontend loads in browser through Nginx reverse proxy
+  - [x] Backend communicates with BigStore over internal network
+  - [x] Automated test suite passes (8/8 in `test-health.sh`, 4/4 in backend, 3/3 in BigStore)
