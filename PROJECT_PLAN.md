@@ -53,13 +53,13 @@
 | **Phase 2** | **Authentication** | Users, Roles (CUSTOMER, PARTNER, ADMIN), Argon2id passwords, Sessions (SHA-256 tokens), centralized AuthMiddleware & RoleMiddleware, brute-force rate limiter, test accounts seed, test suite. | **COMPLETED** |
 | **Phase 3** | Landing Page | Corporate minimal teaser website, secret access code input in search bar, server-side code validation, session unlock to login. | Up Next |
 | **Phase 4** | BigStore Core | Physical hashed storage paths, directory trees, file metadata, chunked streaming uploads, checksums, quota validation. | Pending |
-| **Phase 5** | Subscriptions | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates, renewal billing against partner. | Pending |
+| **Phase 5** | Subscriptions | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates; **Subscription pricing: 3.00€/month (300 cents)** billed against partner; platform fee exemption. | Pending |
 | **Phase 6** | Wallet & Ledger | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | Pending |
 | **Phase 7** | Partner Billing | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | Pending |
 | **Phase 8** | File Sharing | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | Pending |
 | **Phase 9** | Movie Mode & Streaming | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | Pending |
 | **Phase 10** | Storefronts | Multi-store partner management, slugs, branding, categories, product variants, inventory, BigStore asset storage. | Pending |
-| **Phase 11** | Cart & Orders | Persistent cart, atomic balance deduction, inventory reservation, immutable order snapshots, invoice generation. | Pending |
+| **Phase 11** | Cart & Orders | Persistent cart, **Fee logic: 1.00€ (100 cents) platform fee for non-subscribers (0€ for active 3€/month subscribers)**, atomic balance deduction, inventory reservation, order snapshots, invoices. | Pending |
 | **Phase 12** | Store Accounts | Store-specific employee roles (STORE_OWNER, STORE_MANAGER, STORE_STAFF, STORE_SUPPORT) and scoped permissions. | Pending |
 | **Phase 13** | Public Directory | Curated directory of files, movies, and collections with admin visibility toggles and custom covers. | Pending |
 | **Phase 14** | Admin System | Complete administrative control over users, stores, billing, storage anomalies, audit logs, and system settings. | Pending |
