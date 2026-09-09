@@ -50,8 +50,8 @@
 | Phase | Milestone | Scope / Key Deliverables | Status |
 |:------|:----------|:-------------------------|:-------|
 | **Phase 1** | **Foundation** | Repo structure, Dockerfiles, Docker Compose, Webpack setup, minimal PHP backend, minimal BigStore service, separate SQLite DBs, internal network isolation, health endpoints, reverse-proxy routing, migration runners, health tests, README. | **COMPLETED** |
-| **Phase 2** | Authentication | Users, Roles (CUSTOMER, PARTNER, ADMIN), Argon2id passwords, Sessions, centralized AuthMiddleware, initial admin seed. | Up Next |
-| **Phase 3** | Landing Page | Corporate minimal teaser website, secret access code input in search bar, server-side code validation, session unlock to login. | Pending |
+| **Phase 2** | **Authentication** | Users, Roles (CUSTOMER, PARTNER, ADMIN), Argon2id passwords, Sessions (SHA-256 tokens), centralized AuthMiddleware & RoleMiddleware, brute-force rate limiter, test accounts seed, test suite. | **COMPLETED** |
+| **Phase 3** | Landing Page | Corporate minimal teaser website, secret access code input in search bar, server-side code validation, session unlock to login. | Up Next |
 | **Phase 4** | BigStore Core | Physical hashed storage paths, directory trees, file metadata, chunked streaming uploads, checksums, quota validation. | Pending |
 | **Phase 5** | Subscriptions | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates, renewal billing against partner. | Pending |
 | **Phase 6** | Wallet & Ledger | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | Pending |
@@ -105,3 +105,46 @@
   - [x] Frontend loads in browser through Nginx reverse proxy
   - [x] Backend communicates with BigStore over internal network
   - [x] Automated test suite passes (8/8 in `test-health.sh`, 4/4 in backend, 3/3 in BigStore)
+
+---
+
+## 4. Phase 2 Detailed Deliverables & Checklist (Authentication & RBAC)
+
+- [x] Database migration `backend/migrations/002_auth_ratelimit.sql` creating `login_attempts` table.
+- [x] Core Request & Response updates (`backend/src/Core/Request.php`, `backend/src/Core/Response.php`):
+  - [x] Bearer token & `platform_session` cookie extraction.
+  - [x] Client IP extraction and authenticated user context binding.
+  - [x] Secure `HttpOnly`, `SameSite=Lax` cookie issuing and deletion.
+- [x] Security Services:
+  - [x] `backend/src/Services/RateLimiter.php`: Sliding window brute-force protection (5 failed attempts max per 5 min).
+  - [x] `backend/src/Services/AuthService.php`: Argon2id password hashing, registration, sessions (SHA-256 tokens), validation, logout.
+- [x] Authorization Middlewares:
+  - [x] `backend/src/Middleware/AuthMiddleware.php`: Token validation, 401 on missing/expired, 403 on suspended.
+  - [x] `backend/src/Middleware/RoleMiddleware.php`: Centralized role enforcement (`ADMIN`, `PARTNER`, `CUSTOMER`), returning 403 `FORBIDDEN`.
+- [x] API Controllers & Endpoints:
+  - [x] `POST /api/v1/auth/login`: Argon2id verification, session generation, HTTP-only cookie.
+  - [x] `POST /api/v1/auth/register`: Customer registration, duplicate email/username rejection (409), wallet creation.
+  - [x] `POST /api/v1/auth/logout`: Session revocation and cookie clearing.
+  - [x] `GET /api/v1/auth/me` & `/api/v1/users/me`: Profile, role list, wallet balance.
+  - [x] Role test endpoints: `/api/v1/customer/ping`, `/api/v1/partner/ping`, `/api/v1/admin/ping`.
+- [x] Seeding & Admin CLI Scripts:
+  - [x] `backend/bin/create_admin.php`: CLI admin creation script.
+  - [x] `backend/bin/seed_users.php`: Automatic seeding of default `admin`, `partner`, and `customer` accounts.
+  - [x] `backend/docker-entrypoint.sh` executes migrations and user seeding on startup.
+- [x] Frontend Webapp (`webapp/`):
+  - [x] Client auth module (`webapp/src/js/auth.js`) with store synchronization.
+  - [x] API client (`webapp/src/js/api.js`) with Bearer token header injection and auth helpers.
+  - [x] Interactive Login / Registration UI (`webapp/src/js/pages/login.js`) with role testing buttons.
+  - [x] Webpack bundle rebuilt with zero errors.
+- [x] Automated Test Suite:
+  - [x] `scripts/test-auth.sh`: 10/10 automated tests passing (Admin login, Partner login, Customer login, 401 unauthenticated, role boundaries 403/200, logout revocation, self-registration, 409 conflict, 429 rate limit).
+  - [x] `scripts/test-health.sh`: 8/8 automated checks passing.
+
+---
+
+## 5. Stopped / Next Steps
+
+- **Where We Stopped**: Completed and verified Phase 2 (Authentication & Authorization).
+- **Next Phase**: **Phase 3 — Landing Page & Secret Teaser Access Code**.
+  - Scope: Polished corporate minimalist teaser website, secret access code input in search bar (`anticipation2026`), server-side code validation, session unlock transition to dashboard/login, responsive design.
+
