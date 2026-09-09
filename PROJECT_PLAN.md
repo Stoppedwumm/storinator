@@ -142,9 +142,27 @@
 
 ---
 
-## 5. Stopped / Next Steps
+## 5. Fee Structure & Subscription Pricing Rules (Spec Addition)
 
-- **Where We Stopped**: Completed and verified Phase 2 (Authentication & Authorization).
+In accordance with financial integrity rules (Rule 6: integer minor units only, Rule 7: ledger mutation required):
+
+1. **Subscribers**:
+   - **Monthly Subscription Fee**: **3.00€ / month** (`300` cents).
+   - **Benefits**:
+     - 50 GiB storage quota on BigStore.
+     - **0.00€ platform fee** on store orders and checkout transactions.
+   - **Billing**: Recorded as a `SUBSCRIPTION_RENEWAL` billing entry (`amount_cents = 300`) accumulating against the associated partner debt ledger.
+
+2. **Non-Subscribers**:
+   - **Platform Fee**: **1.00€** (`100` cents) platform fee charged per checkout order/transaction.
+   - **Enforcement**: Server-side checkout calculation in Phase 11 (`amount_cents + 100` cents platform fee). Cannot be bypassed by frontend tampering (Rule 11).
+   - **Ledger Audit**: Platform fee recorded as a separate ledger line item or breakdown on order creation.
+
+---
+
+## 6. Stopped / Next Steps
+
+- **Where We Stopped**: Completed and verified Phase 2 (Authentication & Authorization). Updated implementation plan with 1€ non-subscriber fee and 3€/mo subscription fee.
 - **Next Phase**: **Phase 3 — Landing Page & Secret Teaser Access Code**.
   - Scope: Polished corporate minimalist teaser website, secret access code input in search bar (`anticipation2026`), server-side code validation, session unlock transition to dashboard/login, responsive design.
 
