@@ -113,11 +113,11 @@ class AuthService
             // If user has PARTNER role, create partner profile record if missing
             if (in_array('PARTNER', $roles, true)) {
                 $partnerStmt = $pdo->prepare('
-                    INSERT OR IGNORE INTO partners (id, user_id, company_name, current_debt_cents, created_at, updated_at)
+                    INSERT OR IGNORE INTO partners (id, user_id, company_name, debt_cents, created_at, updated_at)
                     VALUES (:id, :user_id, :company, 0, datetime("now"), datetime("now"))
                 ');
                 $partnerStmt->execute([
-                    ':id' => 'prt_' . bin2hex(random_bytes(12)),
+                    ':id' => 'par_' . bin2hex(random_bytes(12)),
                     ':user_id' => $userId,
                     ':company' => $username . ' Services',
                 ]);
@@ -125,13 +125,12 @@ class AuthService
 
             // Audit log
             $auditStmt = $pdo->prepare('
-                INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, metadata, created_at)
-                VALUES (:id, :user_id, "USER_REGISTERED", "users", :entity_id, :meta, datetime("now"))
+                INSERT INTO audit_logs (actor_id, action, target_type, target_id, metadata, created_at)
+                VALUES (:actor_id, "USER_REGISTERED", "users", :target_id, :meta, datetime("now"))
             ');
             $auditStmt->execute([
-                ':id' => 'aud_' . bin2hex(random_bytes(12)),
-                ':user_id' => $userId,
-                ':entity_id' => $userId,
+                ':actor_id' => $userId,
+                ':target_id' => $userId,
                 ':meta' => json_encode(['roles' => $roles]),
             ]);
 

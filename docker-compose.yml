@@ -36,6 +36,7 @@ services:
       - DEFAULT_STORAGE_QUOTA_BYTES=${DEFAULT_STORAGE_QUOTA_BYTES:-53687091200}
       - MAX_UPLOAD_SIZE=${MAX_UPLOAD_SIZE:-5368709120}
     volumes:
+      - ./backend:/var/www/html
       - backend-data:/data
     networks:
       - frontend_net
