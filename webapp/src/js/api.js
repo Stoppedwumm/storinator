@@ -7,11 +7,28 @@ export class ApiClient {
     this.baseUrl = baseUrl;
   }
 
+  getToken() {
+    return localStorage.getItem('platform_token') || null;
+  }
+
+  setToken(token) {
+    if (token) {
+      localStorage.setItem('platform_token', token);
+    } else {
+      localStorage.removeItem('platform_token');
+    }
+  }
+
   async request(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint}`;
     const defaultHeaders = {
       'Accept': 'application/json',
     };
+
+    const token = this.getToken();
+    if (token) {
+      defaultHeaders['Authorization'] = `Bearer ${token}`;
+    }
 
     if (options.body && !(options.body instanceof FormData)) {
       defaultHeaders['Content-Type'] = 'application/json';
@@ -77,6 +94,36 @@ export class ApiClient {
   // Verify secret access entry code
   verifyEntryCode(code) {
     return this.post('/v1/entry/verify', { code });
+  }
+
+  // Authentication endpoints
+  login(identifier, password) {
+    return this.post('/v1/auth/login', { identifier, password });
+  }
+
+  register(username, email, password) {
+    return this.post('/v1/auth/register', { username, email, password });
+  }
+
+  logout() {
+    return this.post('/v1/auth/logout', {});
+  }
+
+  getMe() {
+    return this.get('/v1/auth/me');
+  }
+
+  // Role tests
+  pingCustomer() {
+    return this.get('/v1/customer/ping');
+  }
+
+  pingPartner() {
+    return this.get('/v1/partner/ping');
+  }
+
+  pingAdmin() {
+    return this.get('/v1/admin/ping');
   }
 }
 
