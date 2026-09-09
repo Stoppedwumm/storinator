@@ -13,6 +13,8 @@ class Request
     private array $queryParams;
     private array $body;
     private string $rawBody;
+    private array $cookies;
+    private ?array $user = null;
 
     public function __construct()
     {
@@ -21,6 +23,7 @@ class Request
         $this->path = parse_url($this->uri, PHP_URL_PATH) ?: '/';
         $this->headers = $this->extractHeaders();
         $this->queryParams = $_GET;
+        $this->cookies = $_COOKIE;
         $this->rawBody = file_get_contents('php://input') ?: '';
         $this->body = $this->parseBody();
     }
@@ -91,8 +94,47 @@ class Request
         return $this->body[$key] ?? $default;
     }
 
+    public function getCookie(string $name, ?string $default = null): ?string
+    {
+        return $this->cookies[$name] ?? $default;
+    }
+
+    public function getCookies(): array
+    {
+        return $this->cookies;
+    }
+
+    public function getBearerToken(): ?string
+    {
+        $authHeader = $this->getHeader('authorization');
+        if ($authHeader && preg_match('/^Bearer\s+(.+)$/i', trim($authHeader), $matches)) {
+            return trim($matches[1]);
+        }
+        return null;
+    }
+
+    public function getAuthToken(): ?string
+    {
+        return $this->getBearerToken() ?? $this->getCookie('platform_session');
+    }
+
+    public function setUser(array $user): void
+    {
+        $this->user = $user;
+    }
+
+    public function getUser(): ?array
+    {
+        return $this->user;
+    }
+
     public function getClientIp(): string
     {
         return $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    }
+
+    public function getUserAgent(): string
+    {
+        return $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
     }
 }
