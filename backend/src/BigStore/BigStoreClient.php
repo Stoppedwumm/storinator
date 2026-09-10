@@ -31,6 +31,7 @@ class BigStoreClient
             ],
             CURLOPT_TIMEOUT => 4,
             CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
         ]);
 
         $startTime = microtime(true);
@@ -91,6 +92,7 @@ class BigStoreClient
             CURLOPT_HTTPHEADER => $finalHeaders,
             CURLOPT_TIMEOUT => 60,
             CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
         ];
 
         if ($payload !== null) {
@@ -332,6 +334,7 @@ class BigStoreClient
                 return strlen($chunk);
             },
             CURLOPT_TIMEOUT => 300,
+            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
         ]);
 
         curl_exec($ch);

@@ -388,7 +388,7 @@ export function renderFiles(container) {
       await api.createDirectory(folderName.trim(), currentDirectoryId);
       loadDirectory(currentDirectoryId);
     } catch (err) {
-      showAlert(`Could not create folder: ${err.message}`, 'error');
+      showAlert(`Could not create folder: ${err.message}`, 'error', err.code);
     }
   }
 
@@ -471,21 +471,32 @@ export function renderFiles(container) {
         metaEl.textContent = `Error: ${err.message}`;
         metaEl.style.color = 'var(--accent-ruby, #ef4444)';
         fillEl.style.background = 'var(--accent-ruby, #ef4444)';
-        showAlert(`Upload error for "${file.name}": ${err.message}`, 'error');
+        showAlert(`Upload error for "${file.name}": ${err.message}`, 'error', err.code);
       }
     }
 
     loadDirectory(currentDirectoryId);
   }
 
-  function showAlert(msg, type = 'info') {
+  function showAlert(msg, type = 'info', code = null) {
     const alertEl = container.querySelector('#browser-alert');
     alertEl.className = `browser-alert ${type}`;
-    alertEl.textContent = msg;
+    if (code === 'SUBSCRIPTION_REQUIRED' || msg.includes('SUBSCRIPTION_REQUIRED') || msg.includes('subscription is required')) {
+      alertEl.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem;">
+          <span>${escapeHtml(msg)}</span>
+          <a href="#/subscriptions" class="btn btn-primary" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; text-decoration: none; white-space: nowrap;">
+            Subscribe (3.00€/mo)
+          </a>
+        </div>
+      `;
+    } else {
+      alertEl.textContent = msg;
+    }
     alertEl.style.display = 'block';
     setTimeout(() => {
       alertEl.style.display = 'none';
-    }, 5000);
+    }, 7000);
   }
 
   initView();

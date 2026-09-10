@@ -61,10 +61,14 @@ function renderAuthenticatedView(container, user) {
           <div id="role-test-result" style="margin-top: 1rem; display: none;"></div>
         </div>
 
-        <div style="margin-bottom: 1.5rem; text-align: center;">
-          <a href="#/files" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; padding: 0.6rem 1.5rem;">
+        <div style="margin-bottom: 1.5rem; display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+          <a href="#/files" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; padding: 0.6rem 1.25rem;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-            Open BigStore File Manager &rarr;
+            Open File Manager &rarr;
+          </a>
+          <a href="#/subscriptions" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; padding: 0.6rem 1.25rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            Manage Subscription (50 GiB) &rarr;
           </a>
         </div>
 

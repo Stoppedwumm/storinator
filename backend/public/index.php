@@ -9,6 +9,7 @@ use App\Controllers\EntryController;
 use App\Controllers\FileController;
 use App\Controllers\HealthController;
 use App\Controllers\RoleTestController;
+use App\Controllers\SubscriptionController;
 use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
@@ -97,6 +98,22 @@ $router->post('/api/v1/directories', [FileController::class, 'createDirectory'],
 $router->delete('/api/v1/directories/{id}', [FileController::class, 'deleteDirectory'], [[AuthMiddleware::class, 'handle']]);
 
 $router->get('/api/v1/storage/quota', [FileController::class, 'quota'], [[AuthMiddleware::class, 'handle']]);
+
+// Subscription Endpoints (Spec Phase 5 & Section 11, 41)
+$router->post('/api/v1/subscriptions/request', [SubscriptionController::class, 'request'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/subscriptions/request', [SubscriptionController::class, 'request'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/subscriptions/current', [SubscriptionController::class, 'current'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/subscriptions/current', [SubscriptionController::class, 'current'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/subscriptions/cancel', [SubscriptionController::class, 'cancel'], [[AuthMiddleware::class, 'handle']]);
+
+$router->get('/api/v1/partner/subscription-requests', [SubscriptionController::class, 'listPartnerRequests'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/subscription-requests', [SubscriptionController::class, 'listPartnerRequests'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/subscription-requests/{id}/approve', [SubscriptionController::class, 'approveRequest'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/subscription-requests/{id}/approve', [SubscriptionController::class, 'approveRequest'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/subscription-requests/{id}/reject', [SubscriptionController::class, 'rejectRequest'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/subscription-requests/{id}/reject', [SubscriptionController::class, 'rejectRequest'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/subscriptions/{id}/renew', [SubscriptionController::class, 'renewSubscription'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/subscriptions/{id}/renew', [SubscriptionController::class, 'renewSubscription'], [[AuthMiddleware::class, 'handle']]);
 
 // Dispatch incoming request
 $router->dispatch($request);

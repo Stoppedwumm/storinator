@@ -198,6 +198,36 @@ export class ApiClient {
   getFileStreamUrl(id) {
     return `${this.baseUrl}/v1/files/${encodeURIComponent(id)}/stream`;
   }
+
+  // Subscription API endpoints (Spec Phase 5)
+  getCurrentSubscription() {
+    return this.get('/v1/subscriptions/current');
+  }
+
+  requestSubscription(notes = '') {
+    return this.post('/v1/subscriptions/request', { notes });
+  }
+
+  cancelSubscription() {
+    return this.post('/v1/subscriptions/cancel');
+  }
+
+  getPartnerSubscriptionRequests(status = null) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.get(`/v1/partner/subscription-requests${query}`);
+  }
+
+  approveSubscriptionRequest(id) {
+    return this.post(`/v1/partner/subscription-requests/${encodeURIComponent(id)}/approve`);
+  }
+
+  rejectSubscriptionRequest(id, reason = '') {
+    return this.post(`/v1/partner/subscription-requests/${encodeURIComponent(id)}/reject`, { reason });
+  }
+
+  renewSubscription(id) {
+    return this.post(`/v1/partner/subscriptions/${encodeURIComponent(id)}/renew`);
+  }
 }
 
 export const api = new ApiClient();

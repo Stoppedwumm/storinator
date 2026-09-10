@@ -45,9 +45,25 @@ class FileController
         }
     }
 
+    private function checkSubscriptionAccess(array $user): bool
+    {
+        $roles = $user['roles'] ?? [];
+        if (in_array('ADMIN', $roles, true) || in_array('PARTNER', $roles, true)) {
+            return true;
+        }
+
+        $subscriptionService = new \App\Services\SubscriptionService();
+        return $subscriptionService->hasActiveSubscription($user['id']);
+    }
+
     public function createDirectory(Request $request): void
     {
         $user = $request->getUser();
+        if (!$this->checkSubscriptionAccess($user)) {
+            Response::error('SUBSCRIPTION_REQUIRED', 'An active subscription is required to store files.', 403);
+            return;
+        }
+
         $name = trim((string) ($request->getBody('name') ?? ''));
         $parentId = $request->getBody('parent_id') ?: null;
 
@@ -87,6 +103,11 @@ class FileController
     public function initUpload(Request $request): void
     {
         $user = $request->getUser();
+        if (!$this->checkSubscriptionAccess($user)) {
+            Response::error('SUBSCRIPTION_REQUIRED', 'An active subscription is required to store files.', 403);
+            return;
+        }
+
         $originalName = trim((string) ($request->getBody('original_name') ?? $request->getBody('name') ?? ''));
         $totalSizeBytes = $request->getBody('total_size_bytes') ?? $request->getBody('size');
         $totalChunks = (int) ($request->getBody('total_chunks') ?? 1);
@@ -166,6 +187,10 @@ class FileController
     public function directUpload(Request $request): void
     {
         $user = $request->getUser();
+        if (!$this->checkSubscriptionAccess($user)) {
+            Response::error('SUBSCRIPTION_REQUIRED', 'An active subscription is required to store files.', 403);
+            return;
+        }
 
         if (empty($_FILES['file']) || !isset($_FILES['file']['tmp_name']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
             Response::error('UPLOAD_FAILED', 'No file was uploaded or file upload encountered an error.', 400);
