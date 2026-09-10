@@ -42,6 +42,10 @@ export function renderFiles(container) {
               <button class="breadcrumb-item active" data-dir-id="">Root</button>
             </div>
             <div class="toolbar-actions">
+              <button id="manage-shares-btn" class="btn btn-secondary" title="View and manage public share links">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                <span>Shared Links</span>
+              </button>
               <button id="new-folder-btn" class="btn btn-secondary">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
                 New Folder
@@ -83,6 +87,28 @@ export function renderFiles(container) {
               <button id="modal-close-btn" class="modal-close">&times;</button>
             </div>
             <div id="modal-body" class="modal-body"></div>
+          </div>
+        </div>
+
+        <!-- Share Modal -->
+        <div id="share-modal" class="modal-backdrop" style="display: none;">
+          <div class="modal-card" style="max-width: 520px;">
+            <div class="modal-header">
+              <h3 id="share-modal-title" class="modal-title">Share File</h3>
+              <button id="share-modal-close-btn" class="modal-close">&times;</button>
+            </div>
+            <div id="share-modal-body" class="modal-body"></div>
+          </div>
+        </div>
+
+        <!-- Manage Shares Modal -->
+        <div id="manage-shares-modal" class="modal-backdrop" style="display: none;">
+          <div class="modal-card" style="max-width: 780px;">
+            <div class="modal-header">
+              <h3 class="modal-title">Shared Links Management</h3>
+              <button id="manage-shares-close-btn" class="modal-close">&times;</button>
+            </div>
+            <div id="manage-shares-body" class="modal-body"></div>
           </div>
         </div>
       </div>
@@ -129,6 +155,12 @@ export function renderFiles(container) {
 
     newFolderBtn.addEventListener('click', handleCreateFolder);
 
+    const shareModal = container.querySelector('#share-modal');
+    const shareModalCloseBtn = container.querySelector('#share-modal-close-btn');
+    const manageModal = container.querySelector('#manage-shares-modal');
+    const manageModalCloseBtn = container.querySelector('#manage-shares-close-btn');
+    const manageSharesBtn = container.querySelector('#manage-shares-btn');
+
     modalCloseBtn.addEventListener('click', () => {
       modal.style.display = 'none';
       const body = container.querySelector('#modal-body');
@@ -141,6 +173,36 @@ export function renderFiles(container) {
         container.querySelector('#modal-body').innerHTML = '';
       }
     });
+
+    shareModalCloseBtn.addEventListener('click', () => {
+      shareModal.style.display = 'none';
+      container.querySelector('#share-modal-body').innerHTML = '';
+    });
+
+    shareModal.addEventListener('click', (e) => {
+      if (e.target === shareModal) {
+        shareModal.style.display = 'none';
+        container.querySelector('#share-modal-body').innerHTML = '';
+      }
+    });
+
+    manageModalCloseBtn.addEventListener('click', () => {
+      manageModal.style.display = 'none';
+      container.querySelector('#manage-shares-body').innerHTML = '';
+    });
+
+    manageModal.addEventListener('click', (e) => {
+      if (e.target === manageModal) {
+        manageModal.style.display = 'none';
+        container.querySelector('#manage-shares-body').innerHTML = '';
+      }
+    });
+
+    if (manageSharesBtn) {
+      manageSharesBtn.addEventListener('click', () => {
+        openManageSharesModal();
+      });
+    }
   }
 
   async function loadDirectory(directoryId) {
@@ -271,6 +333,9 @@ export function renderFiles(container) {
             <a href="${api.getFileDownloadUrl(file.id)}" class="action-btn download-file-btn" title="Download file" download="${escapeHtml(file.original_name)}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             </a>
+            <button class="action-btn share-file-btn" title="Create share link" data-id="${escapeHtml(file.id)}" data-name="${escapeHtml(file.original_name)}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            </button>
             <button class="action-btn delete-file-btn" title="Delete file" data-id="${escapeHtml(file.id)}" data-name="${escapeHtml(file.original_name)}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
@@ -334,6 +399,256 @@ export function renderFiles(container) {
         openPreviewModal(fileId, fileName, mime);
       });
     });
+
+    // Share handlers
+    contentEl.querySelectorAll('.share-file-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fileId = btn.getAttribute('data-id');
+        const fileName = btn.getAttribute('data-name');
+        openShareModal(fileId, fileName);
+      });
+    });
+  }
+
+  function openShareModal(fileId, fileName) {
+    const modal = container.querySelector('#share-modal');
+    const title = container.querySelector('#share-modal-title');
+    const body = container.querySelector('#share-modal-body');
+
+    title.textContent = `Share: ${fileName}`;
+    body.innerHTML = `
+      <form id="share-create-form">
+        <div id="share-create-error" style="display: none; padding: 0.5rem; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border-radius: var(--radius-sm); font-size: 0.825rem; margin-bottom: 1rem;"></div>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+            <input type="checkbox" id="share-require-pw" />
+            <span>Protect with password</span>
+          </label>
+          <div id="share-pw-field" style="display: none; margin-top: 0.5rem;">
+            <input type="password" id="share-pw-input" placeholder="Set password (min 4 chars)" style="width: 100%; padding: 0.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary);" />
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+            <input type="checkbox" id="share-allow-dl" checked />
+            <span>Allow file downloads (uncheck for view-only)</span>
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+          <div>
+            <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.35rem;">Max Downloads (optional)</label>
+            <input type="number" id="share-max-dl" min="1" placeholder="Unlimited" style="width: 100%; padding: 0.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary);" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.35rem;">Expires At (optional)</label>
+            <input type="datetime-local" id="share-expires" style="width: 100%; padding: 0.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary);" />
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+          <button type="button" id="share-cancel-btn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="share-submit-btn" class="btn btn-primary">Create Share Link</button>
+        </div>
+      </form>
+    `;
+
+    const form = body.querySelector('#share-create-form');
+    const pwCheck = body.querySelector('#share-require-pw');
+    const pwField = body.querySelector('#share-pw-field');
+    const pwInput = body.querySelector('#share-pw-input');
+    const dlCheck = body.querySelector('#share-allow-dl');
+    const maxDlInput = body.querySelector('#share-max-dl');
+    const expiresInput = body.querySelector('#share-expires');
+    const errEl = body.querySelector('#share-create-error');
+    const submitBtn = body.querySelector('#share-submit-btn');
+
+    pwCheck.addEventListener('change', () => {
+      pwField.style.display = pwCheck.checked ? 'block' : 'none';
+      if (pwCheck.checked) pwInput.focus();
+    });
+
+    body.querySelector('#share-cancel-btn').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errEl.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Generating...';
+
+      const payload = {
+        file_id: fileId,
+        download_enabled: dlCheck.checked,
+      };
+
+      if (pwCheck.checked && pwInput.value) {
+        payload.password = pwInput.value;
+      }
+
+      if (maxDlInput.value) {
+        payload.max_downloads = parseInt(maxDlInput.value, 10);
+      }
+
+      if (expiresInput.value) {
+        payload.expires_at = new Date(expiresInput.value).toISOString();
+      }
+
+      try {
+        const res = await api.createShare(payload);
+        const share = res.data;
+        const publicUrl = window.location.origin + '/#/s/' + share.token;
+
+        body.innerHTML = `
+          <div style="text-align: center; padding: 0.5rem 0;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+            <h4 style="margin-bottom: 0.5rem; color: var(--accent-cyan);">Share Link Created!</h4>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+              Anyone with this link can ${share.download_enabled ? 'view and download' : 'view'} this file${share.has_password ? ' using your password' : ''}.
+            </p>
+
+            <div class="share-result-box" style="margin-bottom: 1.25rem;">
+              <label style="display: block; text-align: left; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.35rem;">Public Share URL</label>
+              <div class="share-link-input-group">
+                <input type="text" id="share-copy-input" value="${escapeHtml(publicUrl)}" readonly />
+                <button type="button" id="share-copy-btn" class="btn btn-secondary">Copy</button>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 0.75rem;">
+              <a href="#/s/${share.token}" target="_blank" class="btn btn-outline" style="font-size: 0.85rem;">Preview Landing Page</a>
+              <button type="button" id="share-done-btn" class="btn btn-primary" style="font-size: 0.85rem;">Done</button>
+            </div>
+          </div>
+        `;
+
+        const copyBtn = body.querySelector('#share-copy-btn');
+        const copyInput = body.querySelector('#share-copy-input');
+        copyBtn.addEventListener('click', () => {
+          copyInput.select();
+          navigator.clipboard.writeText(copyInput.value);
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+        });
+
+        body.querySelector('#share-done-btn').addEventListener('click', () => {
+          modal.style.display = 'none';
+        });
+      } catch (err) {
+        errEl.textContent = err.message || 'Failed to create share link.';
+        errEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Share Link';
+      }
+    });
+
+    modal.style.display = 'flex';
+  }
+
+  async function openManageSharesModal() {
+    const modal = container.querySelector('#manage-shares-modal');
+    const body = container.querySelector('#manage-shares-body');
+
+    modal.style.display = 'flex';
+    body.innerHTML = `
+      <div style="text-align: center; padding: 2rem;">
+        <div class="spinner" style="margin: 0 auto 1rem;"></div>
+        <p style="color: var(--text-secondary);">Loading your shared links...</p>
+      </div>
+    `;
+
+    try {
+      const res = await api.listShares({ limit: 100 });
+      const shares = res.data?.shares || [];
+
+      if (shares.length === 0) {
+        body.innerHTML = `
+          <div style="text-align: center; padding: 2.5rem 1rem;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem; color: var(--text-muted);">🔗</div>
+            <h4 style="margin-bottom: 0.5rem;">No Active Share Links</h4>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; max-width: 360px; margin: 0 auto 1.5rem;">
+              You have not created any public share links yet. Click the share icon next to any file to generate a link.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <div class="shares-table-container">
+          <table class="shares-table">
+            <thead>
+              <tr>
+                <th>Resource</th>
+                <th>Share Link</th>
+                <th>Downloads</th>
+                <th>Views</th>
+                <th>Security</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      shares.forEach(s => {
+        const fullUrl = window.location.origin + '/#/s/' + s.token;
+        const dlText = s.max_downloads ? `${s.download_count} / ${s.max_downloads}` : `${s.download_count}`;
+        html += `
+          <tr data-id="${escapeHtml(s.id)}">
+            <td>
+              <strong title="${escapeHtml(s.resource_name)}">${escapeHtml(s.resource_name)}</strong>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">${formatDate(s.created_at)}</div>
+            </td>
+            <td>
+              <a href="#/s/${s.token}" target="_blank" style="color: var(--accent-cyan); text-decoration: none; font-family: monospace;">
+                /s/${escapeHtml(s.token)}
+              </a>
+            </td>
+            <td>${dlText}</td>
+            <td>${s.view_count}</td>
+            <td>
+              ${s.has_password ? '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: var(--accent-amber);">🔒 Password</span>' : '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-green);">Public</span>'}
+            </td>
+            <td>
+              <button class="btn btn-sm btn-outline revoke-share-btn" data-id="${escapeHtml(s.id)}" style="color: var(--accent-red); border-color: rgba(239, 68, 68, 0.4);">
+                Revoke
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      body.innerHTML = html;
+
+      body.querySelectorAll('.revoke-share-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const sid = btn.getAttribute('data-id');
+          if (confirm('Are you sure you want to revoke this share link? Once revoked, it cannot be reopened.')) {
+            try {
+              await api.revokeShare(sid);
+              openManageSharesModal();
+            } catch (err) {
+              alert('Failed to revoke share: ' + err.message);
+            }
+          }
+        });
+      });
+    } catch (err) {
+      body.innerHTML = `
+        <div style="padding: 1.5rem; color: var(--accent-red); text-align: center;">
+          Failed to load shared links: ${escapeHtml(err.message)}
+        </div>
+      `;
+    }
   }
 
   function openPreviewModal(fileId, fileName, mime) {

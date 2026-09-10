@@ -50,8 +50,8 @@
 | **Phase 5** | **Subscriptions** | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates; **Subscription pricing: 3.00€/month (300 cents)** billed against partner; platform fee exemption; automated test suite. | **COMPLETED** |
 | **Phase 6** | **Wallet & Ledger** | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | **COMPLETED** |
 | **Phase 7** | **Partner Billing** | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | **COMPLETED** |
-| **Phase 8** | **File Sharing** | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | **In Progress** |
-| **Phase 9** | Movie Mode & Streaming | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | Pending |
+| **Phase 8** | **File Sharing** | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | **COMPLETED** |
+| **Phase 9** | **Movie Mode & Streaming** | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | **In Progress** |
 | **Phase 10** | Storefronts | Multi-store partner management, slugs, branding, categories, product variants, inventory, BigStore asset storage. | Pending |
 | **Phase 11** | Cart & Orders | Persistent cart, **Fee logic: 1.00€ (100 cents) platform fee for non-subscribers (0€ for active 3€/month subscribers)**, atomic balance deduction, inventory reservation, order snapshots, invoices. | Pending |
 | **Phase 12** | Store Accounts | Store-specific employee roles (STORE_OWNER, STORE_MANAGER, STORE_STAFF, STORE_SUPPORT) and scoped permissions. | Pending |
@@ -419,28 +419,86 @@ In accordance with financial integrity rules (Rule 6: integer minor units only, 
 
 ---
 
-## 11. Phase 8 — File Sharing (IN PROGRESS)
+## 11. Phase 8 — File Sharing (COMPLETED)
+
+### Work Completed in Phase 8:
+- [x] **Database Schema & Migrations (`backend/migrations/006_file_sharing.sql`)**:
+  - `file_shares` table: `id`, `user_id`, `file_id`, `directory_id`, `resource_type`, `resource_name`, `token`, `password_hash`, `expires_at`, `download_enabled`, `max_downloads`, `download_count`, `view_count`, `is_revoked`, `created_at`, `updated_at`.
+  - `share_access_tokens` table: `id`, `share_id`, `token_hash`, `expires_at`, `created_at`.
+  - Indexes: `idx_shares_token`, `idx_shares_user`, `idx_shares_file`, `idx_shares_dir`, and `idx_sat_token_hash`.
+  - Applied via `php backend/bin/migrate.php` inside webapp container.
+- [x] **Backend Service Layer (`backend/src/Services/ShareService.php`)**:
+  - Cryptographic alphanumeric token generator (`generateToken(10)`).
+  - Implemented `createShare`: validates resource existence and ownership, Argon2id password hashing, future expiry, download limits.
+  - Implemented `listUserShares`: paginated active shares list with stats.
+  - Implemented `getShare`, `updateShare`, `revokeShare`: ownership-verified mutations.
+  - Implemented `resolvePublicShare`: view count tracking, sanitization, password gating.
+  - Implemented `unlockWithPassword`: verifies Argon2id hash, issues temporary unlock token (`sat_...`).
+  - Implemented `authorizeAccess`: verifies permissions for downloads/streams, checking revocation, expiry, download toggles, max download limits, direct passwords (`X-Share-Password`, `?password=`), and unlock tokens (`X-Share-Token`, `?token=`).
+  - Implemented `recordDownload`: atomic increment of download count.
+- [x] **Backend Controller Layer (`backend/src/Controllers/ShareController.php`)**:
+  - `POST /api/v1/shares`: Create share link.
+  - `GET /api/v1/shares`: List active user shares.
+  - `GET /api/v1/shares/{id}`: Share details.
+  - `PATCH /api/v1/shares/{id}`: Update share settings.
+  - `DELETE /api/v1/shares/{id}`: Revoke share.
+  - `GET /api/v1/s/{token}`: Public share metadata.
+  - `POST /api/v1/s/{token}/unlock`: Password unlock verification.
+  - `GET /api/v1/s/{token}/download` and `/s/{token}/download`: Proxied binary download through BigStore.
+  - `GET /api/v1/s/{token}/stream` and `/s/{token}/stream`: Proxied HTTP Range stream through BigStore.
+- [x] **Routing & Web Server Proxy (`webapp/nginx.conf` & `backend/public/index.php`)**:
+  - Registered all share endpoints under `/api/v1/...` and `/api/...`.
+  - Configured Nginx regex FastCGI proxy for direct `/s/[^/]+/(download|stream)` URLs.
+- [x] **Frontend Integration & UI Components**:
+  - Added methods in `webapp/src/js/api.js`: `createShare`, `listShares`, `getShare`, `updateShare`, `revokeShare`, `getPublicShare`, `unlockShare`, `getPublicShareDownloadUrl`, `getPublicShareStreamUrl`.
+  - Enhanced client `webapp/src/js/router.js` with parameterized route pattern matching (`/s/:token`).
+  - Created responsive glassmorphic stylesheet `webapp/src/css/share.css` with dark public landing cards, lock boxes, media players, and modal management tables.
+  - Built public share landing page `webapp/src/js/pages/share.js` handling loading, 404/410 states, password unlock forms, video/audio players, and download buttons.
+  - Enhanced File Manager `webapp/src/js/pages/files.js` with "Share" action buttons on each file, share creation modal, and "Shared Links" management modal for listing and revoking links.
+  - Recompiled Webpack bundle and verified HTTP 200 on all static assets.
+- [x] **Automated Test Suite (`scripts/test-sharing.sh`)**:
+  - **26/26 tests passed**:
+    - Unauthenticated request rejection (HTTP 401).
+    - File upload and default share link creation.
+    - Anonymous public metadata query and view counter tracking.
+    - Anonymous clean download `/s/{token}/download` and download counter tracking.
+    - Password protection with Argon2id verification and unlock token issuance.
+    - View-only enforcement (`download_enabled = false` returns HTTP 403 `DOWNLOAD_DISABLED`).
+    - Max download limit enforcement (3rd attempt returns HTTP 410 `DOWNLOAD_LIMIT_EXCEEDED`).
+    - Expiration enforcement (expired links return HTTP 410 `SHARE_EXPIRED`).
+    - Owner revocation workflow and listing.
+    - Security isolation: cross-user revocation blocked (HTTP 404), cross-user file sharing blocked (HTTP 422).
+    - Strict zero-leakage verified: no internal BigStore hostnames or filesystem paths exposed in headers or bodies (Rules 3, 4, 10).
+- [x] **Full Regression & Integrity Testing Across Platform**:
+  - **163+ tests passing across all 8 test suites** (`test-health`, `test-landing`, `test-auth`, `test-storage`, `test-subscriptions`, `test-wallet`, `test-billing`, `test-sharing`).
+
+---
+
+## 12. Phase 9 — Movie Mode & Range Streaming (IN PROGRESS)
 
 ### Phase Objectives:
-Build secure, tokenized public file and directory sharing adhering strictly to Rule 10 (never expose raw BigStore or filesystem paths) and Rule 13 (centralized authorization):
-1. **Cryptographically Secure Tokens**: Share links use URL-safe random tokens (`/s/{token}`) generated server-side.
-2. **Access Control & Permissions**:
-   - `download_enabled`: Toggle allowing or forbidding direct file download (view/preview only vs downloadable).
-   - `password_hash`: Optional Argon2id password protection requiring password unlock before granting file access or metadata.
-   - `expires_at`: Optional timestamp expiration; access past expiration returns HTTP 410 Gone.
-   - `max_downloads`: Optional download quota; exceeding download limit returns HTTP 410 Gone.
-3. **Audit & Counters**:
-   - `view_count`: Incremented on each share landing page access.
-   - `download_count`: Incremented atomically on each successful file download stream.
-   - `is_revoked`: Instant revocation by the file owner or admin.
-4. **Zero Path Leakage**:
-   - Downloads stream through backend proxy via BigStore internal service using hashed file IDs.
-   - BigStore remains internal-only; client never accesses BigStore directly (Rules 3 & 4).
-5. **UI & Deliverables**:
-   - Share modal in File Manager to generate links with password, expiry, and download toggles.
-   - Public share page (`/s/{token}` or `#/s/:token`) with file details, password prompt modal, preview/download actions.
-   - Shares management interface in webapp.
-   - Automated test suite `scripts/test-sharing.sh`.
+Build movie library management and streaming service interface adhering strictly to Rule 10 (never expose raw BigStore or filesystem paths) and Rule 19 (HTTP Range requests with short-lived stream tokens):
+1. **Designated Movie Folders & Media File Detection**:
+   - Folders marked as "Movie Folders" automatically detect media files (`.mp4`, `.mkv`, `.webm`, `.mov`, `.m4v`).
+   - BigStore scans media files, extracts container metadata (format, duration, codecs).
+2. **Intelligent Filename Normalization & Metadata Matching**:
+   - Normalizer extracts clean title and release year (e.g., `The.Matrix.1999.1080p.mkv` -> `The Matrix`, `1999`).
+   - Pluggable metadata provider (TMDB / OMDb / Mock fallback) queries titles, posters, backdrops, genres, runtime, directors, cast, and ratings.
+   - Confidence scoring: high confidence auto-assigns metadata, uncertain triggers manual admin/user selection.
+   - Manual metadata override endpoints allowing correction of title, year, poster, and cast.
+3. **Short-Lived Tokenized HTTP Range Streaming**:
+   - Client requests short-lived stream token (`POST /api/v1/movies/{id}/stream-token`).
+   - Browser plays media via `/api/v1/media/stream/{token}`.
+   - Tokens expire after 15 minutes and cannot be shared across sessions.
+   - Non-buffering direct proxy streaming with full HTTP 206 Partial Content support (`Accept-Ranges: bytes`, `Content-Range`, `Content-Length`, `Content-Type`).
+   - Memory-safe: zero streaming through PHP memory buffering.
+4. **Streaming Service Frontend UI**:
+   - Netflix/Plex-style responsive poster grid with hover animations, badges, search, and genre filtering.
+   - Dedicated movie detail view with full-bleed backdrop, synopsis, runtime, rating, director, and cast.
+   - Integrated HTML5 video player supporting seeking, resume, and keyboard shortcuts.
+5. **Automated Test Suite**:
+   - `scripts/test-movies.sh` verifying movie scanning, filename parsing, metadata storage, stream token issuance, token expiration, HTTP 206 range seeking, and cross-user permission boundaries.
+
 
 
 

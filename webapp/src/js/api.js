@@ -326,6 +326,53 @@ export class ApiClient {
       notes,
     }, { headers });
   }
+
+  // File Sharing Endpoints (Spec Phase 8)
+  createShare(params) {
+    return this.post('/v1/shares', params);
+  }
+
+  listShares(params = {}) {
+    const { limit = 50, offset = 0 } = params;
+    const q = new URLSearchParams({ limit, offset });
+    return this.get(`/v1/shares?${q.toString()}`);
+  }
+
+  getShare(id) {
+    return this.get(`/v1/shares/${encodeURIComponent(id)}`);
+  }
+
+  updateShare(id, params) {
+    return this.patch(`/v1/shares/${encodeURIComponent(id)}`, params);
+  }
+
+  revokeShare(id) {
+    return this.delete(`/v1/shares/${encodeURIComponent(id)}`);
+  }
+
+  getPublicShare(token) {
+    return this.get(`/v1/s/${encodeURIComponent(token)}`);
+  }
+
+  unlockShare(token, password) {
+    return this.post(`/v1/s/${encodeURIComponent(token)}/unlock`, { password });
+  }
+
+  getPublicShareDownloadUrl(token, unlockToken = null) {
+    let url = `${this.baseUrl}/v1/s/${encodeURIComponent(token)}/download`;
+    if (unlockToken) {
+      url += `?token=${encodeURIComponent(unlockToken)}`;
+    }
+    return url;
+  }
+
+  getPublicShareStreamUrl(token, unlockToken = null) {
+    let url = `${this.baseUrl}/v1/s/${encodeURIComponent(token)}/stream`;
+    if (unlockToken) {
+      url += `?token=${encodeURIComponent(unlockToken)}`;
+    }
+    return url;
+  }
 }
 
 export const api = new ApiClient();

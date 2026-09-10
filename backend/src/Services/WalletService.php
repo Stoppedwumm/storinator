@@ -103,7 +103,7 @@ class WalletService
         $stmt = $this->pdo->prepare('
             SELECT * FROM wallet_transactions
             WHERE wallet_id = :wid
-            ORDER BY created_at DESC, id DESC
+            ORDER BY created_at DESC, rowid DESC
             LIMIT :limit OFFSET :offset
         ');
         $stmt->bindValue(':wid', $walletId, PDO::PARAM_STR);

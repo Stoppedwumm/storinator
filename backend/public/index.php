@@ -12,6 +12,7 @@ use App\Controllers\RoleTestController;
 use App\Controllers\SubscriptionController;
 use App\Controllers\WalletController;
 use App\Controllers\PartnerBillingController;
+use App\Controllers\ShareController;
 use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
@@ -148,6 +149,30 @@ $router->get('/api/v1/admin/billing/partners', [PartnerBillingController::class,
 $router->get('/api/admin/billing/partners', [PartnerBillingController::class, 'adminListPartners'], [[AuthMiddleware::class, 'handle']]);
 $router->post('/api/v1/admin/billing/settle', [PartnerBillingController::class, 'adminSettleDebt'], [[AuthMiddleware::class, 'handle']]);
 $router->post('/api/admin/billing/settle', [PartnerBillingController::class, 'adminSettleDebt'], [[AuthMiddleware::class, 'handle']]);
+
+// File Sharing Endpoints (Spec Phase 8 & Section 14)
+$router->post('/api/v1/shares', [ShareController::class, 'create'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/shares', [ShareController::class, 'create'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/shares', [ShareController::class, 'list'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/shares', [ShareController::class, 'list'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/shares/{id}', [ShareController::class, 'show'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/shares/{id}', [ShareController::class, 'show'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/v1/shares/{id}', [ShareController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/shares/{id}', [ShareController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/shares/{id}', [ShareController::class, 'revoke'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/shares/{id}', [ShareController::class, 'revoke'], [[AuthMiddleware::class, 'handle']]);
+
+// Public Share Access Endpoints
+$router->get('/api/v1/s/{token}', [ShareController::class, 'getPublic']);
+$router->get('/api/s/{token}', [ShareController::class, 'getPublic']);
+$router->post('/api/v1/s/{token}/unlock', [ShareController::class, 'unlock']);
+$router->post('/api/s/{token}/unlock', [ShareController::class, 'unlock']);
+$router->get('/api/v1/s/{token}/download', [ShareController::class, 'download']);
+$router->get('/api/s/{token}/download', [ShareController::class, 'download']);
+$router->get('/s/{token}/download', [ShareController::class, 'download']);
+$router->get('/api/v1/s/{token}/stream', [ShareController::class, 'stream']);
+$router->get('/api/s/{token}/stream', [ShareController::class, 'stream']);
+$router->get('/s/{token}/stream', [ShareController::class, 'stream']);
 
 // Dispatch incoming request
 $router->dispatch($request);

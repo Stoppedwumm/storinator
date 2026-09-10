@@ -1,5 +1,5 @@
 /**
- * Hash-based router with History API compatibility
+ * Hash and Path-based router with parameter support
  */
 export class Router {
   constructor(routes = {}) {
@@ -17,7 +17,12 @@ export class Router {
   }
 
   resolve() {
-    const rawHash = window.location.hash.slice(1) || '/';
+    let path = window.location.pathname;
+    const rawHash = window.location.hash.slice(1);
+
+    if (rawHash) {
+      path = rawHash;
+    }
 
     // Support section anchor links on landing page (#infrastructure, etc.)
     if (rawHash && !rawHash.startsWith('/')) {
@@ -37,10 +42,33 @@ export class Router {
       }
     }
 
-    const handler = this.routes[rawHash] || this.routes['/'];
-    if (handler) {
-      this.currentRoute = rawHash;
-      handler();
+    // Direct match
+    if (this.routes[path]) {
+      this.currentRoute = path;
+      this.routes[path]();
+      window.scrollTo(0, 0);
+      return;
+    }
+
+    // Parameterized routes (e.g. /s/:token)
+    for (const [routePattern, handler] of Object.entries(this.routes)) {
+      if (routePattern.includes(':')) {
+        const regexStr = '^' + routePattern.replace(/:([a-zA-Z0-9_]+)/g, '(?<$1>[^/]+)') + '$';
+        const match = path.match(new RegExp(regexStr));
+        if (match) {
+          this.currentRoute = path;
+          handler(match.groups || {});
+          window.scrollTo(0, 0);
+          return;
+        }
+      }
+    }
+
+    // Fallback to '/'
+    const fallbackHandler = this.routes['/'];
+    if (fallbackHandler) {
+      this.currentRoute = '/';
+      fallbackHandler();
       window.scrollTo(0, 0);
     }
   }

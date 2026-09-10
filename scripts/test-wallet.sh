@@ -46,7 +46,7 @@ HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/v1/wal
 assert_eq "401" "$HTTP_CODE" "Unauthenticated topup rejected with HTTP 401"
 
 # Test 2: Register fresh customer
-RAND_STR=$(head -c 6 /dev/urandom | tr -dc 'a-z0-9')
+RAND_STR=$(head /dev/urandom | tr -dc 'a-z0-9' | head -c 6)
 CUST_USER="wal_cust_${RAND_STR}"
 CUST_EMAIL="${CUST_USER}@test.local"
 CUST_PASS="SecureWalletPass123!"
