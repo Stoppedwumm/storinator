@@ -474,30 +474,111 @@ In accordance with financial integrity rules (Rule 6: integer minor units only, 
 
 ---
 
-## 12. Phase 9 — Movie Mode & Range Streaming (IN PROGRESS)
+## 12. Phase 9 — Movie Mode & Range Streaming (COMPLETED)
+
+### Work Completed in Phase 9:
+- [x] **Database Schema & Migrations (`backend/migrations/007_movies.sql`)**:
+  - `movies` table: `id`, `user_id`, `file_id`, `directory_id`, `title`, `original_title`, `release_year`, `description`, `poster_url`, `backdrop_url`, `genres`, `runtime_minutes`, `rating`, `director`, `cast_members`, `confidence_score`, `is_public`, `created_at`, `updated_at`.
+  - `stream_tokens` table: `token`, `file_id`, `movie_id`, `user_id`, `expires_at`, `created_at`.
+  - `movie_folders` table: `id`, `user_id`, `directory_id`, `created_at`.
+  - Full indexing: `idx_movies_user`, `idx_movies_file`, `idx_stream_tokens_file`, `idx_stream_tokens_exp`, and `idx_movie_folders_user`.
+  - Applied via `php backend/bin/migrate.php` inside webapp container.
+- [x] **Backend Service Layer (`backend/src/Services/MovieService.php`)**:
+  - Intelligent filename parser (`parseFilename`): extracts clean title and 4-digit release year, normalizes punctuation, strips technical release tags (`1080p`, `x264`, `HEVC`, etc.), handles parent directory fallback for generic file names (`movie.mp4`).
+  - Metadata enrichment engine (`fetchMetadata`): TMDB/OMDb HTTP provider integration with high-fidelity fallback catalog and dynamic cinema heuristics.
+  - Automated media scanner (`scanUserMedia`): scans user files in BigStore, detects video formats (`.mp4`, `.mkv`, `.webm`, etc.), registers new movies, prevents duplicate registrations.
+  - Ownership & permission management (`listMovies`, `getMovie`, `updateMovie`, `deleteMovie`): user isolation with public/admin support, internal BigStore path concealment (Rule 10).
+  - Stream token generator (`createStreamToken`): issues short-lived cryptographic tokens (`stk_...`) with 15-minute validity window.
+  - Movie folders designation (`designateMovieFolder`, `listMovieFolders`).
+- [x] **Backend Controller Layer (`backend/src/Controllers/MovieController.php`)**:
+  - `GET /api/v1/movies`: Paginated movie list with search (`?search=`) and genre (`?genre=`) filters.
+  - `POST /api/v1/movies/scan`: Trigger media file scan.
+  - `GET /api/v1/movies/{id}`: Detailed movie metadata with sanitized file info.
+  - `POST /api/v1/movies/{id}/metadata` & `PATCH /api/v1/movies/{id}`: Edit movie metadata.
+  - `DELETE /api/v1/movies/{id}`: Delete movie record.
+  - `POST /api/v1/movies/{id}/stream-token`: Generate short-lived streaming token.
+  - `GET /api/v1/media/stream/{token}` & `/media/stream/{token}`: Tokenized HTTP Range streaming directly proxied from BigStore with zero PHP memory buffering (Rule 19).
+  - `POST /api/v1/movies/folders` & `GET /api/v1/movies/folders`: Movie folder management.
+- [x] **Routing & Web Server Proxy (`webapp/nginx.conf` & `backend/public/index.php`)**:
+  - Re-ordered router to prioritize specific `/movies/scan` and `/movies/folders` routes before parameterized `{id}` routes.
+  - Supported `HEAD` requests on all `GET` routes in `Router.php` per HTTP specifications.
+  - FastCGI proxy configured in Nginx for clean `/media/stream/{token}` URLs.
+- [x] **Frontend Webapp Cinema UI (`webapp/`)**:
+  - API Client methods in `webapp/src/js/api.js`: `listMovies`, `getMovie`, `scanMovies`, `updateMovieMetadata`, `deleteMovie`, `createMovieStreamToken`, `listMovieFolders`, `designateMovieFolder`.
+  - Cinema stylesheet `webapp/src/css/movies.css`: dark cinema aesthetics, responsive poster grid, hover overlays with play actions, glassmorphism badges, full-bleed hero backdrop modal, and fullscreen video player overlay.
+  - Movie catalog component `webapp/src/js/pages/movies.js`: live search debouncer, genre chips filter, scan button with loading spinner, movie detail view, metadata editor, and cinema player with seek shortcuts (`Space`, `F`, `ArrowLeft`, `ArrowRight`).
+  - Added "Movies" link in `webapp/src/js/components/header.js` and registered `/movies` route in `webapp/src/js/app.js`.
+  - Rebuilt Webpack bundle and verified all assets serve HTTP 200.
+- [x] **Automated Test Suite & Regression Verification**:
+  - `scripts/test-movies.sh`: **35/35 automated checks passing**:
+    - Unauthenticated 401 rejection on movie library and scan endpoints.
+    - Media upload and automatic scanning.
+    - Title and year normalization (`The.Matrix.1999.1080p.mkv` -> `The Matrix`, `1999`).
+    - Artwork and metadata enrichment (posters, director, cast, synopsis).
+    - Manual metadata editing (director, rating, genres).
+    - Movie folder designation and listing.
+    - Short-lived streaming token issuance (`stk_...`).
+    - HTTP Range requests with HTTP 206 Partial Content, `Accept-Ranges: bytes`, and byte-level slice verification.
+    - Clean stream route verification (`/media/stream/{token}`).
+    - Invalid and expired token rejection (HTTP 403).
+    - Cross-user isolation: User B cannot view, stream, edit, or delete User A's movies.
+    - Search and genre filtering.
+    - Owner movie deletion.
+    - Strict zero-leakage check: no BigStore internal hostnames or filesystem paths leaked.
+  - **Full Platform Regression**: **198+ passing tests across all 9 automated test suites** (`test-health`, `test-landing`, `test-auth`, `test-storage`, `test-subscriptions`, `test-wallet`, `test-billing`, `test-sharing`, `test-movies`).
+
+---
+
+## 13. Phase 10 — Stores & Merchant Platform (IN PROGRESS)
 
 ### Phase Objectives:
-Build movie library management and streaming service interface adhering strictly to Rule 10 (never expose raw BigStore or filesystem paths) and Rule 19 (HTTP Range requests with short-lived stream tokens):
-1. **Designated Movie Folders & Media File Detection**:
-   - Folders marked as "Movie Folders" automatically detect media files (`.mp4`, `.mkv`, `.webm`, `.mov`, `.m4v`).
-   - BigStore scans media files, extracts container metadata (format, duration, codecs).
-2. **Intelligent Filename Normalization & Metadata Matching**:
-   - Normalizer extracts clean title and release year (e.g., `The.Matrix.1999.1080p.mkv` -> `The Matrix`, `1999`).
-   - Pluggable metadata provider (TMDB / OMDb / Mock fallback) queries titles, posters, backdrops, genres, runtime, directors, cast, and ratings.
-   - Confidence scoring: high confidence auto-assigns metadata, uncertain triggers manual admin/user selection.
-   - Manual metadata override endpoints allowing correction of title, year, poster, and cast.
-3. **Short-Lived Tokenized HTTP Range Streaming**:
-   - Client requests short-lived stream token (`POST /api/v1/movies/{id}/stream-token`).
-   - Browser plays media via `/api/v1/media/stream/{token}`.
-   - Tokens expire after 15 minutes and cannot be shared across sessions.
-   - Non-buffering direct proxy streaming with full HTTP 206 Partial Content support (`Accept-Ranges: bytes`, `Content-Range`, `Content-Length`, `Content-Type`).
-   - Memory-safe: zero streaming through PHP memory buffering.
-4. **Streaming Service Frontend UI**:
-   - Netflix/Plex-style responsive poster grid with hover animations, badges, search, and genre filtering.
-   - Dedicated movie detail view with full-bleed backdrop, synopsis, runtime, rating, director, and cast.
-   - Integrated HTML5 video player supporting seeking, resume, and keyboard shortcuts.
-5. **Automated Test Suite**:
-   - `scripts/test-movies.sh` verifying movie scanning, filename parsing, metadata storage, stream token issuance, token expiration, HTTP 206 range seeking, and cross-user permission boundaries.
+Build the store and merchant system allowing partners to create independently branded e-commerce storefronts accessible by any customer without requiring a subscription (Spec Sections 22-25):
+
+1. **Database Schema Enhancements (`backend/migrations/008_stores.sql`)**:
+   - `stores` table enhancements: add `logo_url`, `banner_url`, `theme_color`, `contact_email`, `contact_phone`, `terms_content`, `settings_json`.
+   - `store_categories` table: `id`, `store_id`, `name`, `slug`, `sort_order`, `created_at`.
+   - `products` table enhancements: add `short_description`, `currency` (default EUR), `sku`, `category_id`, `images_json`, `variants_json`.
+   - Appropriate indexes for store slugs, product search, and categories.
+
+2. **Backend Service & Controller Layer (`backend/src/Services/StoreService.php` & `backend/src/Controllers/StoreController.php`)**:
+   - **Partner Store Management** (requires `PARTNER` or `ADMIN` role):
+     - `POST /api/v1/partner/stores`: Create store (name, slug, description, branding).
+     - `GET /api/v1/partner/stores`: List partner's stores.
+     - `GET /api/v1/partner/stores/{id}`: Partner store details & settings.
+     - `PATCH /api/v1/partner/stores/{id}`: Update store branding, contact, theme colors.
+     - `POST /api/v1/partner/stores/{id}/categories`: Add category.
+     - `GET /api/v1/partner/stores/{id}/categories`: List store categories.
+     - `POST /api/v1/partner/stores/{id}/products`: Create product (name, slug, price_cents, inventory, sku, category, images, variants).
+     - `GET /api/v1/partner/stores/{id}/products`: List store products for partner with inventory tracking.
+     - `PATCH /api/v1/partner/stores/{id}/products/{productId}`: Update product details, pricing, inventory.
+     - `DELETE /api/v1/partner/stores/{id}/products/{productId}`: Delete or archive product.
+   - **Public Storefront API** (open to all customers, unauthenticated or authenticated, NO subscription required):
+     - `GET /api/v1/stores`: List all active public stores.
+     - `GET /api/v1/stores/{slug}`: Public storefront header, branding, categories.
+     - `GET /api/v1/stores/{slug}/products`: Public product catalog with category filter, search, price sorting.
+     - `GET /api/v1/stores/{slug}/products/{productSlug}`: Single product page details with images and variant options.
+
+3. **Frontend Storefront UI (`webapp/`)**:
+   - Storefront Directory (`webapp/src/js/pages/stores.js`): Browse all active partner stores.
+   - Branded Storefront View (`webapp/src/js/pages/storefront.js`):
+     - Store hero banner, custom logo, theme styling, description, contact details.
+     - Category filter pills, search input.
+     - Product cards with price (formatted in EUR: `X.XX €`), stock status, and detail modal.
+     - Product detail view with images, variant selectors, description, and "Add to Cart" placeholder for Phase 11.
+   - Partner Store Dashboard (`webapp/src/js/pages/partner-stores.js`):
+     - Create and customize store branding, color themes.
+     - Add/edit products with inventory count, minor units price, categories.
+   - Navigation: "Stores" link added to top navigation.
+
+4. **Automated Test Suite (`scripts/test-stores.sh`)**:
+   - Unauthenticated access to public store and products (200 OK, no subscription needed).
+   - Customer forbidden from partner store creation/management (HTTP 403).
+   - Partner store creation with slug validation and branding.
+   - Category management.
+   - Product creation with integer `price_cents` (Rule 6).
+   - Inventory tracking and update validation.
+   - Public product search and category filtering.
+   - Cross-partner isolation: Partner B cannot edit Partner A's store or products.
 
 
 
