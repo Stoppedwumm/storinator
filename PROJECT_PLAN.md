@@ -529,57 +529,106 @@ In accordance with financial integrity rules (Rule 6: integer minor units only, 
 
 ---
 
-## 13. Phase 10 — Stores & Merchant Platform (IN PROGRESS)
+## 13. Phase 10 — Stores & Merchant Platform (COMPLETED)
 
-### Phase Objectives:
-Build the store and merchant system allowing partners to create independently branded e-commerce storefronts accessible by any customer without requiring a subscription (Spec Sections 22-25):
+### Work Completed in Phase 10:
+- [x] **Database Schema Enhancements (`backend/migrations/008_stores.sql`)**:
+  - `stores` table: added `logo_url`, `banner_url`, `theme_color` (default `#6366f1`), `contact_email`, `contact_phone`, `terms_content`, `settings_json`.
+  - `store_categories` table: `id` (`sct_...`), `store_id`, `name`, `slug`, `sort_order`, `created_at` with unique constraint on `(store_id, slug)`.
+  - `products` table: added `short_description`, `currency` (default `'EUR'`), `sku`, `category_id`, `images_json`, `variants_json`.
+  - Migration applied cleanly via `docker compose exec -T webapp php bin/migrate.php`.
+- [x] **Backend Service Layer (`backend/src/Services/StoreService.php`)**:
+  - Partner store management: `createStore`, `getStoreById`, `getStoreBySlug`, `listStores`, `listPartnerStores`, `updateStore`, `deleteStore`.
+  - Category management: `createCategory`, `listCategories`, `deleteCategory`.
+  - Product management: `createProduct`, `getProduct`, `getProductBySlug`, `listProducts`, `updateProduct`, `deleteProduct`.
+  - Currency formatting and strict integer minor units rule enforcement (Rule 6): `formatCents` formats `18999` to `"189.99 €"`.
+  - Authorization & security: `verifyStoreAccess` guarantees partners can only modify their own stores and catalogs (Rule 13).
+  - Path sanitization: Strict zero-leakage check guarantees BigStore storage paths or internal hostnames are never exposed (Rules 3, 4, 10).
+- [x] **Backend Controller Layer (`backend/src/Controllers/StoreController.php`)**:
+  - Public endpoints (unrestricted, unauthenticated, NO customer storage subscription required per Spec Section 22):
+    - `GET /api/v1/stores`: Paginated store directory.
+    - `GET /api/v1/stores/{slug}`: Public storefront metadata and branding.
+    - `GET /api/v1/stores/{slug}/products`: Public product catalog with category filter, search query, and pagination.
+    - `GET /api/v1/stores/{slug}/products/{productSlug}`: Single product details with variant options and formatted price.
+  - Partner endpoints (guarded by `PARTNER` or `ADMIN` role):
+    - `POST /api/v1/partner/stores`, `GET /api/v1/partner/stores`, `GET /api/v1/partner/stores/{id}`, `PATCH /api/v1/partner/stores/{id}`, `DELETE /api/v1/partner/stores/{id}`.
+    - `POST /api/v1/partner/stores/{id}/categories`, `GET /api/v1/partner/stores/{id}/categories`, `DELETE /api/v1/partner/stores/{id}/categories/{categoryId}`.
+    - `POST /api/v1/partner/stores/{id}/products`, `GET /api/v1/partner/stores/{id}/products`, `GET /api/v1/partner/stores/{id}/products/{productId}`, `PATCH /api/v1/partner/stores/{id}/products/{productId}`, `DELETE /api/v1/partner/stores/{id}/products/{productId}`.
+- [x] **Routing (`backend/public/index.php`)**:
+  - Registered all public and partner store routes.
+- [x] **Frontend Webapp Storefront & Merchant UI (`webapp/`)**:
+  - Added store client methods to `webapp/src/js/api.js`: `listPublicStores`, `getPublicStore`, `listPublicStoreProducts`, `getPublicProduct`, `listPartnerStores`, `createPartnerStore`, `getPartnerStore`, `updatePartnerStore`, `deletePartnerStore`, `listStoreCategories`, `createStoreCategory`, `deleteStoreCategory`, `listStoreProducts`, `createStoreProduct`, `getStoreProduct`, `updateStoreProduct`, `deleteStoreProduct`.
+  - Created stylesheet `webapp/src/css/stores.css` featuring responsive store directory grid, storefront hero banner with dynamic accent color, category tabs, product cards, stock badges, and interactive product modal.
+  - Built Public Stores Directory page `webapp/src/js/pages/stores.js` with live search and store card directory.
+  - Built Public Storefront page `webapp/src/js/pages/storefront.js` with category filter pills, product search, product cards, and modal dialog with quantity selector, variant choices, and cart feedback.
+  - Built Merchant Console page `webapp/src/js/pages/partner-stores.js` allowing partners to create stores, edit branding & color themes, manage categories, and create/edit/delete products and inventory.
+  - Added "Stores" link to public header navigation and "Merchant" link for partners in `webapp/src/js/components/header.js`.
+  - Registered routes `#/stores`, `#/stores/:slug`, and `#/partner/stores` in `webapp/src/js/app.js`.
+  - Recompiled Webpack bundle and verified all assets serve HTTP 200.
+- [x] **Automated Test Suite (`scripts/test-stores.sh`)**:
+  - **30/30 automated checks passing**:
+    - Public unauthenticated store directory access (HTTP 200).
+    - Unauthenticated partner operation rejection (HTTP 401).
+    - Customer role forbidden from partner endpoints (HTTP 403).
+    - Partner store creation with slug validation and branding.
+    - Duplicate slug collision rejection (HTTP 422).
+    - Public storefront access by anonymous visitor without subscription.
+    - Category creation, ordering, and deletion.
+    - Product creation with integer minor units (`price_cents`), rejecting negative prices.
+    - Inventory updates and price modifications.
+    - Public product catalog category filtering, search queries, and slug lookup.
+    - Cross-partner security isolation: Partner B cannot mutate, add products to, or delete Partner A's store.
+    - Owner product and store deletion.
+    - Strict zero-leakage check: zero BigStore host or filesystem paths leaked.
+- [x] **Full Platform Regression**:
+  - **228+ passing tests across all 10 automated test suites** (`test-health`, `test-landing`, `test-auth`, `test-storage`, `test-subscriptions`, `test-wallet`, `test-billing`, `test-sharing`, `test-movies`, `test-stores`).
 
-1. **Database Schema Enhancements (`backend/migrations/008_stores.sql`)**:
-   - `stores` table enhancements: add `logo_url`, `banner_url`, `theme_color`, `contact_email`, `contact_phone`, `terms_content`, `settings_json`.
-   - `store_categories` table: `id`, `store_id`, `name`, `slug`, `sort_order`, `created_at`.
-   - `products` table enhancements: add `short_description`, `currency` (default EUR), `sku`, `category_id`, `images_json`, `variants_json`.
-   - Appropriate indexes for store slugs, product search, and categories.
+---
 
-2. **Backend Service & Controller Layer (`backend/src/Services/StoreService.php` & `backend/src/Controllers/StoreController.php`)**:
-   - **Partner Store Management** (requires `PARTNER` or `ADMIN` role):
-     - `POST /api/v1/partner/stores`: Create store (name, slug, description, branding).
-     - `GET /api/v1/partner/stores`: List partner's stores.
-     - `GET /api/v1/partner/stores/{id}`: Partner store details & settings.
-     - `PATCH /api/v1/partner/stores/{id}`: Update store branding, contact, theme colors.
-     - `POST /api/v1/partner/stores/{id}/categories`: Add category.
-     - `GET /api/v1/partner/stores/{id}/categories`: List store categories.
-     - `POST /api/v1/partner/stores/{id}/products`: Create product (name, slug, price_cents, inventory, sku, category, images, variants).
-     - `GET /api/v1/partner/stores/{id}/products`: List store products for partner with inventory tracking.
-     - `PATCH /api/v1/partner/stores/{id}/products/{productId}`: Update product details, pricing, inventory.
-     - `DELETE /api/v1/partner/stores/{id}/products/{productId}`: Delete or archive product.
-   - **Public Storefront API** (open to all customers, unauthenticated or authenticated, NO subscription required):
-     - `GET /api/v1/stores`: List all active public stores.
-     - `GET /api/v1/stores/{slug}`: Public storefront header, branding, categories.
-     - `GET /api/v1/stores/{slug}/products`: Public product catalog with category filter, search, price sorting.
-     - `GET /api/v1/stores/{slug}/products/{productSlug}`: Single product page details with images and variant options.
+## 14. Phase 11 — Cart, Checkout & Orders (NEXT UP)
 
-3. **Frontend Storefront UI (`webapp/`)**:
-   - Storefront Directory (`webapp/src/js/pages/stores.js`): Browse all active partner stores.
-   - Branded Storefront View (`webapp/src/js/pages/storefront.js`):
-     - Store hero banner, custom logo, theme styling, description, contact details.
-     - Category filter pills, search input.
-     - Product cards with price (formatted in EUR: `X.XX €`), stock status, and detail modal.
-     - Product detail view with images, variant selectors, description, and "Add to Cart" placeholder for Phase 11.
-   - Partner Store Dashboard (`webapp/src/js/pages/partner-stores.js`):
-     - Create and customize store branding, color themes.
-     - Add/edit products with inventory count, minor units price, categories.
-   - Navigation: "Stores" link added to top navigation.
+### Phase Objectives (Spec Sections 24-27):
+Build the e-commerce shopping cart, order placement, fee computation, and wallet checkout engine:
 
-4. **Automated Test Suite (`scripts/test-stores.sh`)**:
-   - Unauthenticated access to public store and products (200 OK, no subscription needed).
-   - Customer forbidden from partner store creation/management (HTTP 403).
-   - Partner store creation with slug validation and branding.
-   - Category management.
-   - Product creation with integer `price_cents` (Rule 6).
-   - Inventory tracking and update validation.
-   - Public product search and category filtering.
-   - Cross-partner isolation: Partner B cannot edit Partner A's store or products.
+1. **Database Schema Enhancements (`backend/migrations/009_orders.sql`)**:
+   - `orders` table: `id` (`ord_...`), `order_number`, `user_id`, `store_id`, `partner_id`, `subtotal_cents`, `platform_fee_cents`, `total_cents`, `currency`, `status` (`PENDING`, `PAID`, `FULFILLED`, `CANCELLED`, `REFUNDED`), `shipping_address_json`, `created_at`, `updated_at`.
+   - `order_items` table: `id` (`ori_...`), `order_id`, `product_id`, `product_name`, `sku`, `unit_price_cents`, `quantity`, `total_cents`, `variant_json`.
+   - Indexing on `user_id`, `store_id`, `partner_id`, `order_number`, `status`.
 
+2. **Backend Financial & Checkout Engine (`OrderService.php` & `OrderController.php`)**:
+   - Strict adherence to Rule 6 (integer minor units only) and Rule 7 (ledger entry required for every balance change):
+     - Calculate order subtotal from server-side product prices (Rule 11: never trust frontend values).
+     - Fee logic:
+       - **Active subscriber**: `platform_fee_cents = 0`.
+       - **Non-subscriber**: `platform_fee_cents = 100` (1.00 €).
+     - Total = `subtotal_cents + platform_fee_cents`.
+   - Atomic wallet payment:
+     - Check customer wallet balance in database transaction with `FOR UPDATE` lock.
+     - Reject if balance < total with HTTP 402 Insufficient Funds.
+     - Deduct customer wallet balance: record `ORDER_PAYMENT` ledger transaction.
+     - Credit partner debt: record `ORDER_REVENUE` in `partner_billing_entries` (subtotal minus partner commission / settlement).
+     - Decrement product stock inventory atomically; prevent selling out-of-stock items.
+     - Record audit log and transition order status to `PAID`.
+   - Customer Order Endpoints:
+     - `POST /api/v1/orders/checkout`: Place and pay for order using wallet balance.
+     - `GET /api/v1/orders`: List customer's orders.
+     - `GET /api/v1/orders/{id}`: Order details with item breakdown and invoice status.
+   - Partner Order Endpoints:
+     - `GET /api/v1/partner/orders`: List orders received by partner's stores.
+     - `PATCH /api/v1/partner/orders/{id}/fulfill`: Mark order fulfilled / shipped.
 
+3. **Frontend Cart & Checkout UI (`webapp/`)**:
+   - Cart Drawer / Modal: Displays items in cart, quantity adjustments, line totals in EUR, subtotal, subscriber discount badge (`0.00 € fee` for subscribers vs `1.00 € fee` for non-subscribers).
+   - Checkout Flow: Shipping/contact info form, wallet balance check, order summary, "Pay with Wallet" button, and confirmation screen.
+   - Customer Orders Page (`webapp/src/js/pages/orders.js`): Order history with status badges, line items, and receipts.
+   - Partner Merchant Orders Tab: View incoming customer orders and toggle fulfillment status.
 
-
+4. **Automated Test Suite (`scripts/test-orders.sh`)**:
+   - Server-side price recalculation (tampered frontend price rejected or overwritten).
+   - Fee calculation: 0€ for subscriber, 1€ for non-subscriber.
+   - Wallet balance deduction and ledger recording.
+   - Overdraft protection (insufficient funds returns 402).
+   - Out-of-stock item purchase rejection.
+   - Stock quantity decremented upon order.
+   - Partner revenue credit and billing entry audit trail.
+   - Cross-user order isolation (User B cannot view User A's orders).

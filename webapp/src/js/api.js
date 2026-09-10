@@ -407,6 +407,79 @@ export class ApiClient {
   designateMovieFolder(directoryId) {
     return this.post('/v1/movies/folders', { directory_id: directoryId });
   }
+
+  // Store & Merchant Platform API methods (Spec Section 22-25)
+  listPublicStores(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.get(`/v1/stores${query ? '?' + query : ''}`);
+  }
+
+  getPublicStore(slug) {
+    return this.get(`/v1/stores/${encodeURIComponent(slug)}`);
+  }
+
+  listPublicStoreProducts(slug, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.get(`/v1/stores/${encodeURIComponent(slug)}/products${query ? '?' + query : ''}`);
+  }
+
+  getPublicProduct(slug, productSlug) {
+    return this.get(`/v1/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productSlug)}`);
+  }
+
+  listPartnerStores(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.get(`/v1/partner/stores${query ? '?' + query : ''}`);
+  }
+
+  createPartnerStore(data) {
+    return this.post('/v1/partner/stores', data);
+  }
+
+  getPartnerStore(id) {
+    return this.get(`/v1/partner/stores/${encodeURIComponent(id)}`);
+  }
+
+  updatePartnerStore(id, data) {
+    return this.patch(`/v1/partner/stores/${encodeURIComponent(id)}`, data);
+  }
+
+  deletePartnerStore(id) {
+    return this.delete(`/v1/partner/stores/${encodeURIComponent(id)}`);
+  }
+
+  listStoreCategories(storeId) {
+    return this.get(`/v1/partner/stores/${encodeURIComponent(storeId)}/categories`);
+  }
+
+  createStoreCategory(storeId, data) {
+    return this.post(`/v1/partner/stores/${encodeURIComponent(storeId)}/categories`, data);
+  }
+
+  deleteStoreCategory(storeId, categoryId) {
+    return this.delete(`/v1/partner/stores/${encodeURIComponent(storeId)}/categories/${encodeURIComponent(categoryId)}`);
+  }
+
+  listStoreProducts(storeId, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.get(`/v1/partner/stores/${encodeURIComponent(storeId)}/products${query ? '?' + query : ''}`);
+  }
+
+  createStoreProduct(storeId, data) {
+    return this.post(`/v1/partner/stores/${encodeURIComponent(storeId)}/products`, data);
+  }
+
+  getStoreProduct(storeId, productId) {
+    return this.get(`/v1/partner/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}`);
+  }
+
+  updateStoreProduct(storeId, productId, data) {
+    return this.patch(`/v1/partner/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}`, data);
+  }
+
+  deleteStoreProduct(storeId, productId) {
+    return this.delete(`/v1/partner/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}`);
+  }
 }
 
 export const api = new ApiClient();

@@ -14,6 +14,7 @@ use App\Controllers\WalletController;
 use App\Controllers\PartnerBillingController;
 use App\Controllers\ShareController;
 use App\Controllers\MovieController;
+use App\Controllers\StoreController;
 use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
@@ -199,6 +200,52 @@ $router->post('/api/movies/{id}/stream-token', [MovieController::class, 'createS
 $router->get('/api/v1/media/stream/{token}', [MovieController::class, 'streamMedia']);
 $router->get('/api/media/stream/{token}', [MovieController::class, 'streamMedia']);
 $router->get('/media/stream/{token}', [MovieController::class, 'streamMedia']);
+
+// Public Storefront Endpoints (Spec Section 22 - NO subscription required)
+$router->get('/api/v1/stores', [StoreController::class, 'index']);
+$router->get('/api/stores', [StoreController::class, 'index']);
+$router->get('/api/v1/stores/{slug}/products/{productSlug}', [StoreController::class, 'productDetail']);
+$router->get('/api/stores/{slug}/products/{productSlug}', [StoreController::class, 'productDetail']);
+$router->get('/api/v1/stores/{slug}/products', [StoreController::class, 'products']);
+$router->get('/api/stores/{slug}/products', [StoreController::class, 'products']);
+$router->get('/api/v1/stores/{slug}', [StoreController::class, 'show']);
+$router->get('/api/stores/{slug}', [StoreController::class, 'show']);
+
+// Partner Store Management Endpoints (Spec Sections 22-25)
+$router->get('/api/v1/partner/stores/{id}/categories', [StoreController::class, 'listCategories'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/stores/{id}/categories', [StoreController::class, 'listCategories'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/stores/{id}/categories', [StoreController::class, 'createCategory'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/stores/{id}/categories', [StoreController::class, 'createCategory'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/partner/stores/{id}/categories/{categoryId}', [StoreController::class, 'deleteCategory'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/partner/stores/{id}/categories/{categoryId}', [StoreController::class, 'deleteCategory'], [[AuthMiddleware::class, 'handle']]);
+
+$router->get('/api/v1/partner/stores/{id}/products/{productId}', [StoreController::class, 'partnerShowProduct'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/stores/{id}/products/{productId}', [StoreController::class, 'partnerShowProduct'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/v1/partner/stores/{id}/products/{productId}', [StoreController::class, 'updateProduct'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/partner/stores/{id}/products/{productId}', [StoreController::class, 'updateProduct'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/stores/{id}/products/{productId}', [StoreController::class, 'updateProduct'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/stores/{id}/products/{productId}', [StoreController::class, 'updateProduct'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/partner/stores/{id}/products/{productId}', [StoreController::class, 'deleteProduct'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/partner/stores/{id}/products/{productId}', [StoreController::class, 'deleteProduct'], [[AuthMiddleware::class, 'handle']]);
+
+$router->get('/api/v1/partner/stores/{id}/products', [StoreController::class, 'partnerListProducts'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/stores/{id}/products', [StoreController::class, 'partnerListProducts'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/stores/{id}/products', [StoreController::class, 'createProduct'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/stores/{id}/products', [StoreController::class, 'createProduct'], [[AuthMiddleware::class, 'handle']]);
+
+$router->get('/api/v1/partner/stores/{id}', [StoreController::class, 'partnerShow'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/stores/{id}', [StoreController::class, 'partnerShow'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/v1/partner/stores/{id}', [StoreController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/partner/stores/{id}', [StoreController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/stores/{id}', [StoreController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/stores/{id}', [StoreController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/partner/stores/{id}', [StoreController::class, 'destroy'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/partner/stores/{id}', [StoreController::class, 'destroy'], [[AuthMiddleware::class, 'handle']]);
+
+$router->get('/api/v1/partner/stores', [StoreController::class, 'partnerList'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/stores', [StoreController::class, 'partnerList'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/stores', [StoreController::class, 'create'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/stores', [StoreController::class, 'create'], [[AuthMiddleware::class, 'handle']]);
 
 // Dispatch incoming request
 $router->dispatch($request);

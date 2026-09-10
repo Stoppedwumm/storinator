@@ -23,6 +23,9 @@ import { renderWallet } from './pages/wallet.js';
 import { renderBilling } from './pages/billing.js';
 import { renderPublicShare } from './pages/share.js';
 import { renderMovies } from './pages/movies.js';
+import { renderStores } from './pages/stores.js';
+import { renderStorefront } from './pages/storefront.js';
+import { renderPartnerStores } from './pages/partner-stores.js';
 
 import { store } from './state.js';
 import { auth } from './auth.js';
@@ -59,6 +62,9 @@ function initApp() {
     '/login': () => renderLogin(mainView),
     '/files': () => renderFiles(mainView),
     '/movies': () => renderMovies(mainView),
+    '/stores': () => renderStores(mainView),
+    '/stores/:slug': (params) => renderStorefront(mainView, params.slug),
+    '/partner/stores': () => renderPartnerStores(mainView),
     '/subscriptions': () => renderSubscriptions(mainView),
     '/wallet': () => renderWallet(mainView),
     '/billing': () => renderBilling(mainView),

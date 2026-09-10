@@ -24,6 +24,7 @@ export function renderHeader() {
           <a href="#/health" style="color: var(--text-secondary); font-weight: 500; display: inline-flex; align-items: center; gap: 0.35rem;">
             <span class="pulse-dot" style="color: var(--accent-emerald);"></span> Status
           </a>
+          <a href="#/stores" style="color: var(--text-secondary); font-weight: 500;">Stores</a>
           ${user ? `
             <a href="#/files" style="color: var(--text-secondary); font-weight: 500;">Storage</a>
             <a href="#/movies" style="color: var(--text-secondary); font-weight: 500;">Movies</a>
@@ -31,6 +32,7 @@ export function renderHeader() {
             <a href="#/wallet" style="color: var(--text-secondary); font-weight: 500;">Wallet</a>
             ${(user.roles && (user.roles.includes('PARTNER') || user.roles.includes('ADMIN'))) ? `
               <a href="#/billing" style="color: var(--text-secondary); font-weight: 500;">Billing</a>
+              <a href="#/partner/stores" style="color: var(--text-secondary); font-weight: 500;">Merchant</a>
             ` : ''}
           ` : ''}
           ${isUnlocked ? `

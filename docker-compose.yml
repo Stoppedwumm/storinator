@@ -22,8 +22,6 @@ services:
       - ./webapp/nginx.conf:/etc/nginx/http.d/default.conf:ro
       - ./backend:/var/www/backend
       - backend-data:/data
-    networks:
-      - platform_net
     depends_on:
       bigstore:
         condition: service_healthy
@@ -50,18 +48,12 @@ services:
     volumes:
       - bigstore-data:/data/databases
       - bigstore-files:/data/files
-    networks:
-      - platform_net
     healthcheck:
       test: ["CMD-SHELL", "node -e \"const http=require('http'); http.get({host:'127.0.0.1',port:8080,path:'/internal/health',headers:{'X-Internal-Service-Token':process.env.INTERNAL_BIGSTORE_SECRET||''}},(r)=>{process.exit(r.statusCode===200?0:1);}).on('error',()=>process.exit(1));\""]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 5s
-
-networks:
-  platform_net:
-    driver: bridge
 
 volumes:
   backend-data:
