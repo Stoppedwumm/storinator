@@ -6,6 +6,7 @@ import '../css/dashboard.css';
 import '../css/files.css';
 import '../css/subscriptions.css';
 import '../css/wallet.css';
+import '../css/billing.css';
 import '../css/movies.css';
 import '../css/stores.css';
 
@@ -18,6 +19,7 @@ import { renderLogin } from './pages/login.js';
 import { renderFiles } from './pages/files.js';
 import { renderSubscriptions } from './pages/subscriptions.js';
 import { renderWallet } from './pages/wallet.js';
+import { renderBilling } from './pages/billing.js';
 
 import { store } from './state.js';
 import { auth } from './auth.js';
@@ -55,6 +57,7 @@ function initApp() {
     '/files': () => renderFiles(mainView),
     '/subscriptions': () => renderSubscriptions(mainView),
     '/wallet': () => renderWallet(mainView),
+    '/billing': () => renderBilling(mainView),
   });
 
   router.init();

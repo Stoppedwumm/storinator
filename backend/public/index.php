@@ -11,6 +11,7 @@ use App\Controllers\HealthController;
 use App\Controllers\RoleTestController;
 use App\Controllers\SubscriptionController;
 use App\Controllers\WalletController;
+use App\Controllers\PartnerBillingController;
 use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
@@ -128,6 +129,25 @@ $router->post('/api/v1/partner/wallet/credit', [WalletController::class, 'partne
 $router->post('/api/partner/wallet/credit', [WalletController::class, 'partnerCredit'], [[AuthMiddleware::class, 'handle']]);
 $router->get('/api/v1/partner/wallet/customers', [WalletController::class, 'listCustomers'], [[AuthMiddleware::class, 'handle']]);
 $router->get('/api/partner/wallet/customers', [WalletController::class, 'listCustomers'], [[AuthMiddleware::class, 'handle']]);
+
+// Partner Billing & Settlement Endpoints (Spec Phase 7 & Section 9, 10, 20-22)
+$router->get('/api/v1/partner/billing', [PartnerBillingController::class, 'getSummary'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/billing', [PartnerBillingController::class, 'getSummary'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/partner/billing/entries', [PartnerBillingController::class, 'getEntries'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/billing/entries', [PartnerBillingController::class, 'getEntries'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/partner/billing/payments', [PartnerBillingController::class, 'getPayments'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/billing/payments', [PartnerBillingController::class, 'getPayments'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/partner/billing/statements', [PartnerBillingController::class, 'getStatements'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/billing/statements', [PartnerBillingController::class, 'getStatements'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/billing/statements/generate', [PartnerBillingController::class, 'generateStatement'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/billing/statements/generate', [PartnerBillingController::class, 'generateStatement'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/settings/invoice-retention', [PartnerBillingController::class, 'updateInvoiceRetention'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/settings/invoice-retention', [PartnerBillingController::class, 'updateInvoiceRetention'], [[AuthMiddleware::class, 'handle']]);
+
+$router->get('/api/v1/admin/billing/partners', [PartnerBillingController::class, 'adminListPartners'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/admin/billing/partners', [PartnerBillingController::class, 'adminListPartners'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/admin/billing/settle', [PartnerBillingController::class, 'adminSettleDebt'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/admin/billing/settle', [PartnerBillingController::class, 'adminSettleDebt'], [[AuthMiddleware::class, 'handle']]);
 
 // Dispatch incoming request
 $router->dispatch($request);

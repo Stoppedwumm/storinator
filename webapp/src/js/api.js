@@ -258,6 +258,74 @@ export class ApiClient {
     const query = search ? `?search=${encodeURIComponent(search)}` : '';
     return this.get(`/v1/partner/wallet/customers${query}`);
   }
+
+  // Partner Billing & Settlements API endpoints (Spec Phase 7)
+  getPartnerBilling(partnerId = null) {
+    const query = partnerId ? `?partner_id=${encodeURIComponent(partnerId)}` : '';
+    return this.get(`/v1/partner/billing${query}`);
+  }
+
+  getPartnerBillingEntries(params = {}) {
+    const { limit = 20, offset = 0, operation_type = null, partner_id = null } = params;
+    const q = new URLSearchParams();
+    q.set('limit', limit);
+    q.set('offset', offset);
+    if (operation_type) q.set('operation_type', operation_type);
+    if (partner_id) q.set('partner_id', partner_id);
+    return this.get(`/v1/partner/billing/entries?${q.toString()}`);
+  }
+
+  getPartnerPayments(params = {}) {
+    const { limit = 20, offset = 0, partner_id = null } = params;
+    const q = new URLSearchParams();
+    q.set('limit', limit);
+    q.set('offset', offset);
+    if (partner_id) q.set('partner_id', partner_id);
+    return this.get(`/v1/partner/billing/payments?${q.toString()}`);
+  }
+
+  getPartnerStatements(partnerId = null) {
+    const query = partnerId ? `?partner_id=${encodeURIComponent(partnerId)}` : '';
+    return this.get(`/v1/partner/billing/statements${query}`);
+  }
+
+  generatePartnerStatement(period = null, notes = null, partnerId = null) {
+    return this.post('/v1/partner/billing/statements/generate', {
+      period,
+      notes,
+      partner_id: partnerId,
+    });
+  }
+
+  updateInvoiceRetention(enabled, partnerId = null) {
+    return this.post('/v1/partner/settings/invoice-retention', {
+      enabled,
+      partner_id: partnerId,
+    });
+  }
+
+  getAdminPartnersBilling(params = {}) {
+    const { limit = 50, offset = 0, search = '' } = params;
+    const q = new URLSearchParams();
+    q.set('limit', limit);
+    q.set('offset', offset);
+    if (search) q.set('search', search);
+    return this.get(`/v1/admin/billing/partners?${q.toString()}`);
+  }
+
+  adminSettlePartnerDebt(partnerId, amountCents, paymentMethod = 'MANUAL', referenceNumber = '', notes = '', idempotencyKey = null) {
+    const headers = {};
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+    return this.post('/v1/admin/billing/settle', {
+      partner_id: partnerId,
+      amount_cents: amountCents,
+      payment_method: paymentMethod,
+      reference_number: referenceNumber,
+      notes,
+    }, { headers });
+  }
 }
 
 export const api = new ApiClient();

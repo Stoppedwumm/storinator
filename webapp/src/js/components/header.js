@@ -28,6 +28,9 @@ export function renderHeader() {
             <a href="#/files" style="color: var(--text-secondary); font-weight: 500;">Storage</a>
             <a href="#/subscriptions" style="color: var(--text-secondary); font-weight: 500;">Subscription</a>
             <a href="#/wallet" style="color: var(--text-secondary); font-weight: 500;">Wallet</a>
+            ${(user.roles && (user.roles.includes('PARTNER') || user.roles.includes('ADMIN'))) ? `
+              <a href="#/billing" style="color: var(--text-secondary); font-weight: 500;">Billing</a>
+            ` : ''}
           ` : ''}
           ${isUnlocked ? `
             <a href="#/login" class="btn btn-primary" style="font-size: 0.775rem; padding: 0.35rem 0.85rem; border-radius: var(--radius-full);">

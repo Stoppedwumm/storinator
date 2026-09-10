@@ -49,8 +49,8 @@
 | **Phase 4** | **BigStore Core** | Physical hashed storage paths, directory trees, file metadata, chunked streaming uploads, checksums, quota validation, HTTP Range streaming, file manager UI. | **COMPLETED** |
 | **Phase 5** | **Subscriptions** | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates; **Subscription pricing: 3.00€/month (300 cents)** billed against partner; platform fee exemption; automated test suite. | **COMPLETED** |
 | **Phase 6** | **Wallet & Ledger** | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | **COMPLETED** |
-| **Phase 7** | Partner Billing | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | Up Next |
-| **Phase 8** | File Sharing | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | Pending |
+| **Phase 7** | **Partner Billing** | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | **COMPLETED** |
+| **Phase 8** | **File Sharing** | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | **In Progress** |
 | **Phase 9** | Movie Mode & Streaming | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | Pending |
 | **Phase 10** | Storefronts | Multi-store partner management, slugs, branding, categories, product variants, inventory, BigStore asset storage. | Pending |
 | **Phase 11** | Cart & Orders | Persistent cart, **Fee logic: 1.00€ (100 cents) platform fee for non-subscribers (0€ for active 3€/month subscribers)**, atomic balance deduction, inventory reservation, order snapshots, invoices. | Pending |
@@ -366,15 +366,81 @@ In accordance with financial integrity rules (Rule 6: integer minor units only, 
 
 ---
 
-## 10. Next Steps: Phase 7 — Partner Billing & Debt Settlement
+## 10. Phase 7 — Partner Billing & Debt Settlement (IN PROGRESS)
 
-- **Where We Are**: Completed and verified Phase 6 (Wallet & Ledger System). All 37 wallet tests pass.
-- **Immediate Focus**: **Phase 7 — Partner Billing & Debt Settlement**
-  - **Core Requirements**:
-    1. Partner debt ledger tracking accumulated debt from subscription approvals (3.00€ / 300 cents) and customer wallet credits.
-    2. Admin debt payment settlement interface and endpoint (`POST /api/v1/admin/billing/settle`) allowing partial or full payment of partner debt.
-    3. Immutable partner payment ledger (`partner_payment_entries`) recording payment date, amount, method, notes, and admin user ID.
-    4. Partner billing portal view (`GET /api/v1/partner/billing`) showing current debt, line-item charge history, and payment history.
-    5. Automated test suite `scripts/test-billing.sh` verifying partner debt calculations, admin debt settlement, and invoice ledger integrity.
+### Work Completed in Phase 7:
+- [x] **Database Schema & Migrations (`backend/migrations/005_partner_billing.sql`)**:
+  - Enhanced `partner_payments` with `payment_method VARCHAR(64) DEFAULT 'MANUAL'`, `reference_number VARCHAR(128)`, `debt_after_cents INTEGER DEFAULT 0`, and `idempotency_key VARCHAR(128)`.
+  - Created `partner_statements` table (`id`, `partner_id`, `statement_period`, `opening_debt_cents`, `total_charges_cents`, `total_payments_cents`, `closing_debt_cents`, `status`, `notes`, `generated_at`).
+  - Added indexes: `idx_pbe_partner_created`, `idx_pbe_operation`, `idx_ppay_partner_created`, `idx_ppay_idempotency`, and `idx_pstm_partner`.
+  - Applied via `php backend/bin/migrate.php` inside webapp container.
+- [x] **Backend Service Layer (`backend/src/Services/PartnerBillingService.php`)**:
+  - Implemented `getBillingSummary(partnerId)` computing total charges, total payments, calculated debt, and returning recent entries and payments.
+  - Implemented `getBillingEntries(partnerId, limit, offset, opType)` with pagination and integer cents formatting (`+X.XX €`).
+  - Implemented `getPayments(partnerId, limit, offset)` with pagination, admin attribution, payment method, reference number, and `-X.XX €` formatting.
+  - Implemented `settlePayment(adminUserId, partnerId, amountCents, ...)` concurrency-hardened with `BEGIN IMMEDIATE`, atomic `UPDATE partners SET debt_cents = debt_cents - :amount WHERE id = :pid AND debt_cents >= :amount RETURNING debt_cents`, overpayment prevention (HTTP 422), cursor closure, and idempotency key caching.
+  - Implemented `updateInvoiceRetention(partnerId, enabled)` toggling partner invoice retention setting.
+  - Implemented `generateStatement(partnerId, period, notes)` and `getStatements(partnerId)` recording immutable accounting statements.
+  - Implemented `listAllPartners(limit, offset, search)` for administrative overview.
+- [x] **Backend Controller Layer (`backend/src/Controllers/PartnerBillingController.php`)**:
+  - `GET /api/v1/partner/billing` (Partner or Admin).
+  - `GET /api/v1/partner/billing/entries` (Partner or Admin).
+  - `GET /api/v1/partner/billing/payments` (Partner or Admin).
+  - `GET /api/v1/partner/billing/statements` (Partner or Admin).
+  - `POST /api/v1/partner/billing/statements/generate` (Partner or Admin).
+  - `POST /api/v1/partner/settings/invoice-retention` (Partner or Admin).
+  - `GET /api/v1/admin/billing/partners` (Admin only).
+  - `POST /api/v1/admin/billing/settle` (Admin only, supports idempotency key and overpayment protection).
+- [x] **Route Registration (`backend/public/index.php`)**:
+  - Registered all Partner Billing endpoints under both `/api/v1/...` and `/api/...` prefixes protected by `AuthMiddleware`.
+- [x] **Automated Test Suite (`scripts/test-billing.sh`)**:
+  - **30/30 tests passed**:
+    - Unauthenticated request rejection (HTTP 401).
+    - Customer role access rejection (HTTP 403 FORBIDDEN).
+    - Partner billing overview and debt calculation verification.
+    - Invoice retention toggle verification (true/false).
+    - Partner billing entries ledger pagination and positive charge formatting.
+    - Admin partner debt list query.
+    - Settlement validation (zero amount, negative amount, overpayment exceeding debt).
+    - Partial debt settlement: debt decrements, `partner_payments` recorded with method and reference, historical billing entries strictly preserved (Acceptance 22).
+    - Idempotency replay check: identical request returns `idempotent_replay: true` without deducting debt again.
+    - Statement generation and statement listing verification.
+
+---
+
+- [x] **Frontend Integration & UI Components**:
+  - Implemented `ApiClient` methods in `webapp/src/js/api.js`: `getPartnerBilling`, `getPartnerBillingEntries`, `getPartnerPayments`, `getPartnerStatements`, `generatePartnerStatement`, `updateInvoiceRetention`, `getAdminPartnersBilling`, and `adminSettlePartnerDebt`.
+  - Built responsive dark glassmorphism stylesheet `webapp/src/css/billing.css` with metric cards (debt, charges, payments, retention toggle), tabbed tables, status badges, and admin settlement controls.
+  - Implemented comprehensive billing portal `webapp/src/js/pages/billing.js` with live metrics, charges ledger pagination, payments ledger pagination, statement generation, invoice retention switch, and admin settlement form.
+  - Added `/billing` route to `webapp/src/js/app.js` and "Billing" link to `webapp/src/js/components/header.js` for `PARTNER` and `ADMIN` users.
+  - Compiled production bundle with Webpack, synced to host volume, and verified in browser.
+- [x] **Full Regression & Integrity Testing**:
+  - Verified all 7 test suites pass with zero failures: **137 passing checks across 7 test suites** (`test-health.sh`, `test-landing.sh`, `test-auth.sh`, `test-storage.sh`, `test-subscriptions.sh`, `test-wallet.sh`, `test-billing.sh`).
+
+---
+
+## 11. Phase 8 — File Sharing (IN PROGRESS)
+
+### Phase Objectives:
+Build secure, tokenized public file and directory sharing adhering strictly to Rule 10 (never expose raw BigStore or filesystem paths) and Rule 13 (centralized authorization):
+1. **Cryptographically Secure Tokens**: Share links use URL-safe random tokens (`/s/{token}`) generated server-side.
+2. **Access Control & Permissions**:
+   - `download_enabled`: Toggle allowing or forbidding direct file download (view/preview only vs downloadable).
+   - `password_hash`: Optional Argon2id password protection requiring password unlock before granting file access or metadata.
+   - `expires_at`: Optional timestamp expiration; access past expiration returns HTTP 410 Gone.
+   - `max_downloads`: Optional download quota; exceeding download limit returns HTTP 410 Gone.
+3. **Audit & Counters**:
+   - `view_count`: Incremented on each share landing page access.
+   - `download_count`: Incremented atomically on each successful file download stream.
+   - `is_revoked`: Instant revocation by the file owner or admin.
+4. **Zero Path Leakage**:
+   - Downloads stream through backend proxy via BigStore internal service using hashed file IDs.
+   - BigStore remains internal-only; client never accesses BigStore directly (Rules 3 & 4).
+5. **UI & Deliverables**:
+   - Share modal in File Manager to generate links with password, expiry, and download toggles.
+   - Public share page (`/s/{token}` or `#/s/:token`) with file details, password prompt modal, preview/download actions.
+   - Shares management interface in webapp.
+   - Automated test suite `scripts/test-sharing.sh`.
+
 
 
