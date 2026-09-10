@@ -30,6 +30,8 @@ export function renderHeader() {
             <a href="#/movies" style="color: var(--text-secondary); font-weight: 500;">Movies</a>
             <a href="#/subscriptions" style="color: var(--text-secondary); font-weight: 500;">Subscription</a>
             <a href="#/wallet" style="color: var(--text-secondary); font-weight: 500;">Wallet</a>
+            <a href="#/orders" style="color: var(--text-secondary); font-weight: 500;">Orders</a>
+            <a href="#/cart" style="color: var(--text-secondary); font-weight: 500;">🛒 Cart</a>
             ${(user.roles && (user.roles.includes('PARTNER') || user.roles.includes('ADMIN'))) ? `
               <a href="#/billing" style="color: var(--text-secondary); font-weight: 500;">Billing</a>
               <a href="#/partner/stores" style="color: var(--text-secondary); font-weight: 500;">Merchant</a>

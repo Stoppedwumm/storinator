@@ -15,6 +15,8 @@ use App\Controllers\PartnerBillingController;
 use App\Controllers\ShareController;
 use App\Controllers\MovieController;
 use App\Controllers\StoreController;
+use App\Controllers\CartController;
+use App\Controllers\OrderController;
 use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
@@ -246,6 +248,45 @@ $router->get('/api/v1/partner/stores', [StoreController::class, 'partnerList'], 
 $router->get('/api/partner/stores', [StoreController::class, 'partnerList'], [[AuthMiddleware::class, 'handle']]);
 $router->post('/api/v1/partner/stores', [StoreController::class, 'create'], [[AuthMiddleware::class, 'handle']]);
 $router->post('/api/partner/stores', [StoreController::class, 'create'], [[AuthMiddleware::class, 'handle']]);
+
+// Shopping Cart Endpoints (Spec Section 26)
+$router->get('/api/v1/cart', [CartController::class, 'getCart'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/cart', [CartController::class, 'getCart'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/cart/items', [CartController::class, 'addItem'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/cart/items', [CartController::class, 'addItem'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/v1/cart/items/{id}', [CartController::class, 'updateItem'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/cart/items/{id}', [CartController::class, 'updateItem'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/cart/items/{id}', [CartController::class, 'updateItem'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/cart/items/{id}', [CartController::class, 'updateItem'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/cart/items/{id}', [CartController::class, 'removeItem'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/cart/items/{id}', [CartController::class, 'removeItem'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/cart', [CartController::class, 'clearCart'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/cart', [CartController::class, 'clearCart'], [[AuthMiddleware::class, 'handle']]);
+
+// Customer Checkout & Order Endpoints (Spec Sections 27-28)
+$router->post('/api/v1/orders/checkout', [OrderController::class, 'checkout'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/checkout', [OrderController::class, 'checkout'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/checkout', [OrderController::class, 'checkout'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/orders', [OrderController::class, 'customerOrders'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/orders', [OrderController::class, 'customerOrders'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/orders/{id}', [OrderController::class, 'customerOrderDetail'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/orders/{id}', [OrderController::class, 'customerOrderDetail'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/orders/{id}/invoice', [OrderController::class, 'downloadInvoice'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/orders/{id}/invoice', [OrderController::class, 'downloadInvoice'], [[AuthMiddleware::class, 'handle']]);
+
+// Partner Store Order Endpoints (Spec Section 28)
+$router->get('/api/v1/partner/orders', [OrderController::class, 'partnerOrders'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/orders', [OrderController::class, 'partnerOrders'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/partner/orders/{id}', [OrderController::class, 'partnerOrderDetail'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/orders/{id}', [OrderController::class, 'partnerOrderDetail'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/v1/partner/orders/{id}/status', [OrderController::class, 'partnerUpdateStatus'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/partner/orders/{id}/status', [OrderController::class, 'partnerUpdateStatus'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/orders/{id}/status', [OrderController::class, 'partnerUpdateStatus'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/orders/{id}/status', [OrderController::class, 'partnerUpdateStatus'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/v1/partner/orders/{id}/fulfill', [OrderController::class, 'partnerFulfill'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/partner/orders/{id}/fulfill', [OrderController::class, 'partnerFulfill'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/partner/orders/{id}/fulfill', [OrderController::class, 'partnerFulfill'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/orders/{id}/fulfill', [OrderController::class, 'partnerFulfill'], [[AuthMiddleware::class, 'handle']]);
 
 // Dispatch incoming request
 $router->dispatch($request);

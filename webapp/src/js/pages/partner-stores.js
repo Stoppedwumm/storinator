@@ -40,12 +40,14 @@ export async function renderPartnerStores(container) {
       <!-- Merchant Tabs -->
       <div class="merchant-tabs" id="merchant-tabs" style="display: none;">
         <button class="merchant-tab active" data-tab="products">📦 Products & Inventory</button>
+        <button class="merchant-tab" data-tab="orders">📑 Orders & Fulfillment</button>
         <button class="merchant-tab" data-tab="categories">🏷️ Categories</button>
         <button class="merchant-tab" data-tab="settings">⚙️ Store Settings</button>
       </div>
 
       <!-- Tab Contents -->
       <div id="tab-content-products" class="tab-pane"></div>
+      <div id="tab-content-orders" class="tab-pane" style="display: none;"></div>
       <div id="tab-content-categories" class="tab-pane" style="display: none;"></div>
       <div id="tab-content-settings" class="tab-pane" style="display: none;"></div>
 
@@ -67,6 +69,7 @@ export async function renderPartnerStores(container) {
   const tabsWrap = document.getElementById('merchant-tabs');
   const emptyState = document.getElementById('merchant-empty-state');
   const tabProducts = document.getElementById('tab-content-products');
+  const tabOrders = document.getElementById('tab-content-orders');
   const tabCategories = document.getElementById('tab-content-categories');
   const tabSettings = document.getElementById('tab-content-settings');
   const modalRoot = document.getElementById('merchant-modal-root');
@@ -75,6 +78,7 @@ export async function renderPartnerStores(container) {
   let currentStore = null;
   let currentProducts = [];
   let currentCategories = [];
+  let currentOrders = [];
 
   // Tab switching
   tabsWrap.querySelectorAll('.merchant-tab').forEach(tab => {
@@ -83,8 +87,12 @@ export async function renderPartnerStores(container) {
       tab.classList.add('active');
       const tabName = tab.dataset.tab;
       tabProducts.style.display = tabName === 'products' ? 'block' : 'none';
+      tabOrders.style.display = tabName === 'orders' ? 'block' : 'none';
       tabCategories.style.display = tabName === 'categories' ? 'block' : 'none';
       tabSettings.style.display = tabName === 'settings' ? 'block' : 'none';
+      if (tabName === 'orders' && currentStore) {
+        renderOrdersTab(currentStore.id);
+      }
     });
   });
 
@@ -160,6 +168,9 @@ export async function renderPartnerStores(container) {
       currentCategories = catRes.data?.categories || [];
 
       renderProductsTab();
+      if (tabOrders.style.display !== 'none') {
+        renderOrdersTab(storeId);
+      }
       renderCategoriesTab();
       renderSettingsTab();
     } catch (err) {
@@ -253,7 +264,220 @@ export async function renderPartnerStores(container) {
     });
   }
 
-  // --- TAB 2: CATEGORIES ---
+  // --- TAB 2: ORDERS & FULFILLMENT ---
+  async function renderOrdersTab(storeId) {
+    tabOrders.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary);"><div class="spinner" style="margin: 0 auto 1rem;"></div>Loading incoming orders...</div>';
+
+    try {
+      const res = await api.getPartnerOrders({ store_id: storeId });
+      const orders = res.data?.orders || [];
+      const summary = res.data?.summary || { total_orders: 0, total_revenue_cents: 0, pending_orders: 0, completed_orders: 0 };
+      currentOrders = orders;
+
+      tabOrders.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Total Orders</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: var(--text-primary); margin-top: 0.25rem;">${summary.total_orders}</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Gross Store Revenue</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: var(--accent-emerald); margin-top: 0.25rem;">${((summary.total_revenue_cents || 0) / 100).toFixed(2)} €</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Awaiting Fulfillment</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: #f59e0b; margin-top: 0.25rem;">${summary.pending_orders}</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Completed Orders</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: var(--accent-primary); margin-top: 0.25rem;">${summary.completed_orders}</div>
+          </div>
+        </div>
+
+        <div class="merchant-table-wrap">
+          <table class="merchant-table">
+            <thead>
+              <tr>
+                <th>Order Number</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orders.length === 0 ? `
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 3rem 1rem;">
+                    No orders have been placed in this store yet.
+                  </td>
+                </tr>
+              ` : orders.map(ord => `
+                <tr>
+                  <td style="font-family: var(--font-mono); font-weight: 700; color: var(--text-primary);">${escapeHtml(ord.order_number)}</td>
+                  <td>
+                    <div style="font-weight: 600;">${escapeHtml(ord.customer_name || ord.customer_username || 'Customer')}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(ord.customer_email || '')}</div>
+                  </td>
+                  <td>${ord.items_count} item(s)</td>
+                  <td style="font-weight: 700; color: var(--text-primary);">${escapeHtml(ord.formatted_total)}</td>
+                  <td>
+                    <span class="order-badge order-badge-${ord.status.toLowerCase()}">${ord.status}</span>
+                  </td>
+                  <td style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(ord.created_at).toLocaleDateString()}</td>
+                  <td style="text-align: right;">
+                    <button class="btn btn-secondary btn-inspect-order" data-order-id="${ord.id}" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
+                      Inspect & Fulfill
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      tabOrders.querySelectorAll('.btn-inspect-order').forEach(btn => {
+        btn.addEventListener('click', () => openOrderFulfillModal(btn.dataset.orderId));
+      });
+    } catch (e) {
+      tabOrders.innerHTML = `<div style="color: var(--accent-rose); padding: 1.5rem;">Failed to load store orders: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  async function openOrderFulfillModal(orderId) {
+    modalRoot.innerHTML = `
+      <div class="product-modal-backdrop" id="fulfill-modal-backdrop">
+        <div class="product-modal" style="max-width: 650px; padding: 2rem;">
+          <div style="text-align: center; padding: 2rem 0;">
+            <div class="spinner" style="margin: 0 auto 1rem;"></div>
+            <p style="color: var(--text-secondary);">Loading order details...</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const res = await api.getPartnerOrderDetail(orderId);
+      const ord = res.data;
+
+      modalRoot.innerHTML = `
+        <div class="product-modal-backdrop" id="fulfill-modal-backdrop">
+          <div class="product-modal" style="max-width: 650px; padding: 2rem;">
+            <button class="product-modal-close" id="fulfill-modal-close">✕</button>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+              <div>
+                <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin: 0;">Order #${escapeHtml(ord.order_number)}</h2>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">Customer: ${escapeHtml(ord.customer_name || ord.customer_username)} (${escapeHtml(ord.customer_email)})</div>
+              </div>
+              <span class="order-badge order-badge-${ord.status.toLowerCase()}">${ord.status}</span>
+            </div>
+
+            <!-- Items -->
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Ordered Items</h4>
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1.25rem;">
+              ${ord.items.map(it => `
+                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border-color);">
+                  <div>
+                    <strong>${escapeHtml(it.product_name)}</strong>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">SKU: ${escapeHtml(it.sku)} • Qty: ${it.quantity}</div>
+                  </div>
+                  <span style="font-weight: 700;">${escapeHtml(it.formatted_total)}</span>
+                </div>
+              `).join('')}
+              <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
+                <span>Subtotal: ${escapeHtml(ord.formatted_subtotal)}</span>
+                <span>Total Paid: <strong style="color: var(--accent-primary);">${escapeHtml(ord.formatted_total)}</strong></span>
+              </div>
+            </div>
+
+            <!-- Shipping Destination -->
+            ${ord.shipping_address ? `
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Ship To</h4>
+              <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem;">
+                <div><strong>${escapeHtml(ord.shipping_address.name || '')}</strong></div>
+                <div>${escapeHtml(ord.shipping_address.street || '')}</div>
+                <div>${escapeHtml(ord.shipping_address.postal_code || '')} ${escapeHtml(ord.shipping_address.city || '')}, ${escapeHtml(ord.shipping_address.country || '')}</div>
+                ${ord.notes ? `<div style="margin-top: 0.5rem; color: var(--text-muted);"><em>Customer Note: ${escapeHtml(ord.notes)}</em></div>` : ''}
+              </div>
+            ` : ''}
+
+            <!-- Fulfillment Action Form -->
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Fulfillment & Tracking</h4>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Tracking / Dispatch Notes:</label>
+                <input type="text" id="fulfill-notes" placeholder="e.g. Dispatched via DHL Express (Tracking: #DHL12345678)" style="width: 100%; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 0.85rem;">
+              </div>
+              
+              <div style="display: flex; gap: 0.75rem; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <label style="font-size: 0.8rem; color: var(--text-secondary);">Set Status:</label>
+                  <select id="fulfill-status-select" style="padding: 0.4rem 0.6rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 0.85rem;">
+                    <option value="PROCESSING" ${ord.status === 'PROCESSING' ? 'selected' : ''}>PROCESSING</option>
+                    <option value="SHIPPED" ${ord.status === 'SHIPPED' ? 'selected' : ''}>SHIPPED</option>
+                    <option value="COMPLETED" ${ord.status === 'COMPLETED' ? 'selected' : ''}>COMPLETED</option>
+                    <option value="CANCELLED" ${ord.status === 'CANCELLED' ? 'selected' : ''}>CANCELLED</option>
+                  </select>
+                  <button id="btn-update-status" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">Update Status</button>
+                </div>
+
+                ${ord.status !== 'COMPLETED' ? `
+                  <button id="btn-quick-fulfill" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 1rem;">
+                    ✔ Mark Fulfilled (COMPLETED)
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+              <button class="btn btn-secondary" id="btn-fulfill-close-action">Close</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const closeFulfill = () => { modalRoot.innerHTML = ''; };
+      document.getElementById('fulfill-modal-close').addEventListener('click', closeFulfill);
+      document.getElementById('btn-fulfill-close-action').addEventListener('click', closeFulfill);
+
+      const quickFulfillBtn = document.getElementById('btn-quick-fulfill');
+      if (quickFulfillBtn) {
+        quickFulfillBtn.addEventListener('click', async () => {
+          quickFulfillBtn.disabled = true;
+          const notes = document.getElementById('fulfill-notes').value.trim();
+          try {
+            await api.fulfillPartnerOrder(ord.id, notes || null);
+            closeFulfill();
+            renderOrdersTab(currentStore.id);
+          } catch (e) {
+            alert('Failed to fulfill order: ' + (e.message || 'Server error'));
+            quickFulfillBtn.disabled = false;
+          }
+        });
+      }
+
+      document.getElementById('btn-update-status').addEventListener('click', async () => {
+        const selStatus = document.getElementById('fulfill-status-select').value;
+        const notes = document.getElementById('fulfill-notes').value.trim();
+        try {
+          await api.updatePartnerOrderStatus(ord.id, selStatus, notes || null);
+          closeFulfill();
+          renderOrdersTab(currentStore.id);
+        } catch (e) {
+          alert('Failed to update status: ' + (e.message || 'Server error'));
+        }
+      });
+    } catch (e) {
+      alert('Failed to load order: ' + (e.message || 'Server error'));
+      modalRoot.innerHTML = '';
+    }
+  }
+
+  // --- TAB 3: CATEGORIES ---
   function renderCategoriesTab() {
     tabCategories.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">

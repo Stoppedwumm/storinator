@@ -51,13 +51,14 @@
 | **Phase 6** | **Wallet & Ledger** | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | **COMPLETED** |
 | **Phase 7** | **Partner Billing** | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | **COMPLETED** |
 | **Phase 8** | **File Sharing** | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | **COMPLETED** |
-| **Phase 9** | **Movie Mode & Streaming** | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | **In Progress** |
-| **Phase 10** | Storefronts | Multi-store partner management, slugs, branding, categories, product variants, inventory, BigStore asset storage. | Pending |
-| **Phase 11** | Cart & Orders | Persistent cart, **Fee logic: 1.00€ (100 cents) platform fee for non-subscribers (0€ for active 3€/month subscribers)**, atomic balance deduction, inventory reservation, order snapshots, invoices. | Pending |
-| **Phase 12** | Store Accounts | Store-specific employee roles (STORE_OWNER, STORE_MANAGER, STORE_STAFF, STORE_SUPPORT) and scoped permissions. | Pending |
+| **Phase 9** | **Movie Mode & Streaming** | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | **COMPLETED** |
+| **Phase 10** | **Storefronts** | Multi-store partner management, slugs, branding, categories, product variants, inventory, BigStore asset storage. | **COMPLETED** |
+| **Phase 11** | **Cart & Orders** | Persistent cart, **Fee logic: 1.00€ (100 cents) platform fee for non-subscribers (0€ for active 3€/month subscribers)**, atomic balance deduction, inventory reservation, order snapshots, invoices. | **COMPLETED** |
+| **Phase 12** | Store Accounts | Store-specific employee roles (STORE_OWNER, STORE_MANAGER, STORE_STAFF, STORE_SUPPORT) and scoped permissions. | **NEXT UP** |
 | **Phase 13** | Public Directory | Curated directory of files, movies, and collections with admin visibility toggles and custom covers. | Pending |
 | **Phase 14** | Admin System | Complete administrative control over users, stores, billing, storage anomalies, audit logs, and system settings. | Pending |
 | **Phase 15** | Hardening & Audit | Security audit (IDOR, race conditions, CSRF/XSS, path traversal), backup/restore drills, end-to-end acceptance verification. | Pending |
+| **Phase 16** | **UI/UX Usability Overhaul** | Full production-ready overhaul across all views; eradicating robotic engineering jargon with human-friendly product copy; drag-and-drop uploads, toast notifications, rich file previews, responsive layouts, making the platform deeply useful and delightful. | Pending |
 
 ---
 
@@ -585,50 +586,229 @@ In accordance with financial integrity rules (Rule 6: integer minor units only, 
 
 ---
 
-## 14. Phase 11 — Cart, Checkout & Orders (NEXT UP)
+## 14. Phase 11 — Cart, Checkout & Orders (COMPLETED)
 
-### Phase Objectives (Spec Sections 24-27):
-Build the e-commerce shopping cart, order placement, fee computation, and wallet checkout engine:
+### Deliverables & Checklist:
+- [x] **Database Schema & Migrations (`backend/migrations/010_orders_cart.sql`)**:
+  - [x] `orders` table enhanced with unique `idempotency_key` index (`idx_orders_idempotency`).
+  - [x] `cart_items` table (`id`, `user_id`, `store_id`, `product_id`, `variant_json`, `quantity`, `created_at`, `updated_at`) with foreign keys and compound index (`idx_cart_user_store`).
+  - [x] `order_events` table (`id`, `order_id`, `actor_id`, `event_type`, `details_json`, `created_at`) with index `idx_oev_order`.
+  - [x] `invoices` table (`id`, `order_id`, `partner_id`, `user_id`, `invoice_number`, `content_json`, `created_at`).
+  - [x] Migration applied and verified via `php bin/migrate.php`.
+- [x] **Backend Services & Financial Checkout Engine (`OrderService.php` & `CartService.php`)**:
+  - [x] `OrderService::checkout()` atomic transaction (`BEGIN IMMEDIATE`):
+    - [x] Server-side price recalculation strictly from `products` table (Rule 11: client prices never trusted).
+    - [x] Fee computation: active subscriber pays 0.00 € (0 cents); non-subscriber pays 1.00 € (100 cents).
+    - [x] Atomic wallet debit with overdraft guard (`WHERE balance_cents >= :total`) and append-only ledger mutation (`wallet_transactions` `STORE_PURCHASE`).
+    - [x] Atomic stock inventory decrement (`WHERE inventory >= :qty`).
+    - [x] Order and order item snapshot creation with human-readable order number (`ORD-XXXXXXXX-YYYYMMDD`).
+    - [x] Event auditing (`order_events` `ORDER_PLACED`).
+    - [x] Partner invoice retention check: creates immutable JSON invoice snapshot in `invoices` table if enabled.
+    - [x] Persistent shopping cart clearance for purchased store items.
+    - [x] Idempotency key replay protection (detects replay and returns original order without double debit).
+  - [x] `OrderService::getOrder()` with centralized authorization (customer, partner merchant, or admin).
+  - [x] `OrderService::listCustomerOrders()` with pagination and status filtering.
+  - [x] `OrderService::listPartnerOrders()` with store revenue and fulfillment metrics.
+  - [x] `OrderService::updateOrderStatus()` and `fulfillOrder()` with status transitions and event logging.
+  - [x] `OrderService::getInvoice()` returning retained invoice snapshot or receipt.
+  - [x] `CartService`: persistent user cart CRUD, live inventory verification, and subscriber fee estimation.
+- [x] **Backend REST API Controllers & Routing**:
+  - [x] `CartController`: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/{id}`, `DELETE /api/v1/cart/items/{id}`, `DELETE /api/v1/cart`.
+  - [x] `OrderController`: `POST /api/v1/orders/checkout`, `GET /api/v1/orders`, `GET /api/v1/orders/{id}`, `GET /api/v1/orders/{id}/invoice`, `GET /api/v1/partner/orders`, `GET /api/v1/partner/orders/{id}`, `PATCH /api/v1/partner/orders/{id}/fulfill`, `PATCH /api/v1/partner/orders/{id}/status`.
+  - [x] Registered routes in `backend/public/index.php`.
+- [x] **Frontend Web Application (`webapp/`)**:
+  - [x] `webapp/src/js/api.js`: Added 12 Cart, Checkout, Order, and Fulfillment API methods.
+  - [x] `webapp/src/css/orders.css`: Responsive cart layouts, status badges, print-friendly invoice styling.
+  - [x] `webapp/src/js/pages/cart.js`: Full shopping cart, quantity controls, real-time subscriber fee banner (0.00 € vs 1.00 €), wallet balance sufficiency check, shipping address form, and atomic checkout.
+  - [x] `webapp/src/js/pages/orders.js`: Customer order history, status filters, item details modal, and official printable tax invoice modal.
+  - [x] `webapp/src/js/pages/partner-stores.js`: Merchant "Orders & Fulfillment" tab with revenue metrics, order inspection modal, fulfillment notes, and status controls.
+  - [x] `webapp/src/js/pages/storefront.js`: Integrated "Add to Cart" directly with backend persistent cart API.
+  - [x] Webpack production bundle built and verified (`npm run build`).
+- [x] **Automated Test Suite (`scripts/test-orders.sh`)**:
+  - [x] 13 test scenarios covering 46 assertions:
+    - [x] Unauthenticated 401 gates.
+    - [x] Customer 403 gate on merchant orders.
+    - [x] Store and inventory setup.
+    - [x] Persistent cart item addition, update, subtotal calculation.
+    - [x] Checkout input validation (missing store, empty items, inventory exceeded).
+    - [x] HTTP 402 `INSUFFICIENT_FUNDS` rejection with zero stock deducted.
+    - [x] Successful checkout with atomic wallet balance debit and inventory reduction.
+    - [x] Server-side price recalculation (tampered client prices ignored).
+    - [x] Invoice snapshot generation when retention enabled.
+    - [x] Idempotency key replay protection (zero balance deduction on replay).
+    - [x] Active subscriber 0.00 € platform fee exemption.
+    - [x] Customer order history and invoice retrieval.
+    - [x] Cross-customer isolation (403 Forbidden).
+    - [x] Partner order management & fulfillment (`COMPLETED`).
+    - [x] Cross-partner security isolation (Partner B cannot view or fulfill Partner A's orders).
+  - [x] **46 passing tests, 0 failures**.
+- [x] **Full Platform Regression**:
+  - **274+ passing tests across all 11 automated test suites** (`test-health`, `test-landing`, `test-auth`, `test-storage`, `test-subscriptions`, `test-wallet`, `test-billing`, `test-sharing`, `test-movies`, `test-stores`, `test-orders`).
 
-1. **Database Schema Enhancements (`backend/migrations/009_orders.sql`)**:
-   - `orders` table: `id` (`ord_...`), `order_number`, `user_id`, `store_id`, `partner_id`, `subtotal_cents`, `platform_fee_cents`, `total_cents`, `currency`, `status` (`PENDING`, `PAID`, `FULFILLED`, `CANCELLED`, `REFUNDED`), `shipping_address_json`, `created_at`, `updated_at`.
-   - `order_items` table: `id` (`ori_...`), `order_id`, `product_id`, `product_name`, `sku`, `unit_price_cents`, `quantity`, `total_cents`, `variant_json`.
-   - Indexing on `user_id`, `store_id`, `partner_id`, `order_number`, `status`.
+---
 
-2. **Backend Financial & Checkout Engine (`OrderService.php` & `OrderController.php`)**:
-   - Strict adherence to Rule 6 (integer minor units only) and Rule 7 (ledger entry required for every balance change):
-     - Calculate order subtotal from server-side product prices (Rule 11: never trust frontend values).
-     - Fee logic:
-       - **Active subscriber**: `platform_fee_cents = 0`.
-       - **Non-subscriber**: `platform_fee_cents = 100` (1.00 €).
-     - Total = `subtotal_cents + platform_fee_cents`.
-   - Atomic wallet payment:
-     - Check customer wallet balance in database transaction with `FOR UPDATE` lock.
-     - Reject if balance < total with HTTP 402 Insufficient Funds.
-     - Deduct customer wallet balance: record `ORDER_PAYMENT` ledger transaction.
-     - Credit partner debt: record `ORDER_REVENUE` in `partner_billing_entries` (subtotal minus partner commission / settlement).
-     - Decrement product stock inventory atomically; prevent selling out-of-stock items.
-     - Record audit log and transition order status to `PAID`.
-   - Customer Order Endpoints:
-     - `POST /api/v1/orders/checkout`: Place and pay for order using wallet balance.
-     - `GET /api/v1/orders`: List customer's orders.
-     - `GET /api/v1/orders/{id}`: Order details with item breakdown and invoice status.
-   - Partner Order Endpoints:
-     - `GET /api/v1/partner/orders`: List orders received by partner's stores.
-     - `PATCH /api/v1/partner/orders/{id}/fulfill`: Mark order fulfilled / shipped.
+## 15. Phase 12 — Store Accounts & Employee Roles (NEXT UP)
 
-3. **Frontend Cart & Checkout UI (`webapp/`)**:
-   - Cart Drawer / Modal: Displays items in cart, quantity adjustments, line totals in EUR, subtotal, subscriber discount badge (`0.00 € fee` for subscribers vs `1.00 € fee` for non-subscribers).
-   - Checkout Flow: Shipping/contact info form, wallet balance check, order summary, "Pay with Wallet" button, and confirmation screen.
-   - Customer Orders Page (`webapp/src/js/pages/orders.js`): Order history with status badges, line items, and receipts.
-   - Partner Merchant Orders Tab: View incoming customer orders and toggle fulfillment status.
+### Phase Objectives (Spec Sections 28-30):
+Implement granular store employee permissions and delegated management:
+1. **Employee Roles**:
+   - `STORE_OWNER`: Full store control, banking/payout settings, employee management, store deletion.
+   - `STORE_MANAGER`: Catalog management, pricing, category editing, order fulfillment, customer support.
+   - `STORE_STAFF`: Inventory updates, order fulfillment, shipping status changes.
+   - `STORE_SUPPORT`: View orders, respond to customer inquiries, view non-financial receipts.
+2. **Database Schema (`011_store_accounts.sql`)**:
+   - `store_members`: `id`, `store_id`, `user_id`, `role`, `permissions_json`, `invited_by`, `created_at`, `updated_at`.
+3. **Backend Authorization & Middleware**:
+   - Scoped store permission resolver.
+4. **Merchant UI & Test Suite**:
+   - Team/employee management tab in Merchant Console.
+   - Automated integration test suite (`scripts/test-store-accounts.sh`).
 
-4. **Automated Test Suite (`scripts/test-orders.sh`)**:
-   - Server-side price recalculation (tampered frontend price rejected or overwritten).
-   - Fee calculation: 0€ for subscriber, 1€ for non-subscriber.
-   - Wallet balance deduction and ledger recording.
-   - Overdraft protection (insufficient funds returns 402).
-   - Out-of-stock item purchase rejection.
-   - Stock quantity decremented upon order.
-   - Partner revenue credit and billing entry audit trail.
-   - Cross-user order isolation (User B cannot view User A's orders).
+---
+
+## 16. Phase 13 — Public Directory
+
+### Phase Objectives (Spec Sections 31-33):
+Curated public access directory for files, movies, and stores:
+1. **Database Schema (`012_public_directory.sql`)**:
+   - Public visibility toggles, curation flags, and featured collection metadata.
+2. **Backend Services & API**:
+   - Anonymous visitor browsing of curated public resources.
+   - Admin curation controls.
+3. **Frontend UI**:
+   - Public showcase directory with category filters, media cards, and direct public downloads.
+4. **Automated Test Suite (`scripts/test-directory.sh`)**:
+   - Verification of public visibility rules, access control, and isolation of non-public resources.
+
+---
+
+## 17. Phase 14 — Admin System
+
+### Phase Objectives (Spec Sections 34-36):
+Complete administrative back-office command center:
+1. **User Management**:
+   - Search, role elevation (CUSTOMER, PARTNER, ADMIN), account locking/suspension.
+2. **Store & Merchant Oversight**:
+   - Global store directory, partner billing reconciliation, debt settlement recordings.
+3. **Storage & Quota Monitoring**:
+   - BigStore capacity inspection, orphaned object cleanup triggers, quota overrides.
+4. **Audit Log Explorer**:
+   - Global event stream search, filtering by actor, event type, and date range.
+5. **Automated Test Suite (`scripts/test-admin.sh`)**:
+   - Strict `ROLE === ADMIN` protection, authorization enforcement, and audit trail integrity.
+
+---
+
+## 18. Phase 15 — Hardening & Security Audit
+
+### Phase Objectives (Spec Sections 37-39):
+Production readiness, end-to-end security penetration testing, and operational recovery drills:
+1. **Security Review**:
+   - IDOR prevention, SQL injection validation, XSS & CSP headers, CSRF defense verification.
+2. **Financial Race Conditions**:
+   - Parallel checkout balance deduction stress tests, double-spend prevention.
+3. **Upload Abuse & Traversal**:
+   - Malicious extension rejection, path traversal prevention, BigStore storage isolation.
+4. **Disaster Recovery**:
+   - Automated backup and restore drills for SQLite databases and BigStore content objects.
+5. **Automated Test Suite (`scripts/test-hardening.sh`)**.
+
+---
+
+## 19. Phase 16 — Comprehensive UI/UX Overhaul & Usability Polish (Production-Ready Implementation)
+
+### Phase Objectives:
+Go over the entire frontend application end-to-end to transform every page and interaction from functional proof-of-concepts into a cohesive, deeply intuitive, responsive, and genuinely useful web platform in an **actual production-ready state**.
+
+1. **Production-Ready Implementation Mandate**:
+   - **Full Functional Completion**: This phase is not a superficial design pass or conceptual mockup. Every single UI component, workflow, and tool must be **fully implemented, robust, and working end-to-end** in production condition.
+   - **Zero Incomplete Stubs**: Every button, modal, form, toggle, and view must have genuine, tested functionality backing it (real file upload progress and cancelation, real video player speed and fullscreen controls, real saved-address checkout, real inline merchant inventory editing, real printable invoices).
+   - **Zero Broken States**: Zero browser console warnings or errors, zero unhandled promise rejections, zero dead links, zero placeholder strings (e.g. "Lorem ipsum" or "coming soon"), and zero broken layouts.
+
+2. **Human-Centric Copy & Jargon Eradication**:
+   - **Strictly eliminate dry, robotic, internal engineering jargon** across all user-facing screens, marketing landing pages, dropzones, status badges, modals, and tooltips.
+   - **Forbidden / Jargon Phrases to Remove**:
+     - *"Chunked multi-part streaming with SHA-256 integrity verification"* (and variants)
+     - *"Finalizing object assembly and SHA-256 verification..."*
+     - *"Content-addressed hexadecimal object storage"*
+     - *"Argon2id cryptographic hash verifier"*
+     - Internal backend implementation details, architecture acronyms, FastCGI references, and internal service names in customer-facing views.
+   - **Replace with Human, Benefit-Driven Product Copy**:
+     - Write what people actually want to hear and understand:
+       - *"Fast & secure uploads, any file size"*
+       - *"Finishing up your upload..."*
+       - *"Generous 50 GB secure cloud storage"*
+       - *"Watch movies in crisp HD with instant streaming"*
+       - *"Zero-hassle file sharing with custom password protection"*
+
+3. **Design System & Global Usability Foundation**:
+   - **Visual Consistency**: Unified design tokens (colors, typography, radii, elevation, card styling, and dark mode palette).
+   - **Global Toast Notification System**: Replace disruptive browser `alert()` popups with non-blocking, accessible toast notifications (success, info, warning, error, copy confirmation).
+   - **Navigation & Mobile Responsiveness**:
+     - Dynamic active link indicators, persistent breadcrumbs, user profile dropdown with role badge.
+     - Live cart item counter badge updating in real time across page navigation.
+     - Mobile collapsible drawer menu for seamless usability on phones and tablets (375px to 1440px+).
+   - **Empty States & Guided Onboarding**:
+     - Rich, illustrated empty states with contextual Call-To-Action buttons on every view (e.g. "Upload your first file", "Explore movies", "Visit stores", "Top up wallet").
+   - **Loading States & Feedback**:
+     - Consistent skeleton loaders and spinner overlays during asynchronous API calls; clear error banners with retry buttons.
+
+4. **File Storage & Sharing Usability**:
+   - **Drag-and-Drop Uploads**: Dropzone support for dragging files directly from the desktop into folders.
+   - **Upload Queue & Progress**: Real-time upload progress bar showing percentage, transfer speed, and estimated time remaining.
+   - **Multi-Format File Preview Modal**: In-browser preview for images, HTML5 audio player, HTML5 video player, and formatted text/code viewer.
+   - **View Toggles & Sorting**: Grid view (with image thumbnails) vs list view; sort by Name, Size, Modified Date, and File Type.
+   - **Fast 1-Click Sharing**: Share dialog with instant link generation, one-click clipboard copying, password protection toggle, and expiration selector.
+
+5. **Movie Mode & Streaming Usability**:
+   - **Cinema Catalog Grid**: High-resolution movie posters, backdrop hero banner, genre filter pills, and instant search-as-you-type.
+   - **Movie Details Modal**: Overview synopsis, director, cast, runtime, release year, genre badges, ratings, and video format badges.
+   - **Custom Video Player**:
+     - Playback speed toggles (0.75x, 1x, 1.25x, 1.5x, 2x).
+     - Theater mode and fullscreen toggles.
+     - Resume playback from last position.
+     - Keyboard shortcuts (Space = play/pause, Arrow keys = seek, M = mute, F = fullscreen).
+
+6. **Marketplace, Storefronts & Shopping Usability**:
+   - **Store Directory & Storefronts**: Clean brand headers, category sidebar, price range filters, search, and inventory status badges ("In Stock", "Only X Left", "Out of Stock").
+   - **Interactive Product Modal**: Multi-image gallery carousel, variant picker (color/size/tier), quantity stepper, and live subtotal calculator.
+   - **Persistent Cart Drawer / Widget**:
+     - Slide-over cart drawer accessible from anywhere on the platform.
+     - Real-time subscriber perk badge ("Active Subscriber: 0.00 € Platform Fee applied!").
+   - **Streamlined 1-Step Checkout**:
+     - Auto-populated saved shipping address.
+     - Real-time wallet balance sufficiency indicator with 1-click top-up shortcut if balance is low.
+     - Clear financial breakdown (Subtotal, Platform Fee, Total).
+     - Order confirmation modal with instant printable tax invoice.
+
+7. **Customer Orders & Invoices Usability**:
+   - Filterable order list (`ALL`, `PAID`, `PROCESSING`, `SHIPPED`, `COMPLETED`, `CANCELLED`).
+   - Interactive order timeline displaying event log.
+   - Professional, print-ready, clean PDF/print tax invoice view with seller information, line items, VAT/platform fee breakdown, and transaction hash.
+
+8. **Wallet & Financial Management Usability**:
+   - Visual balance card with quick top-up buttons (+10 €, +25 €, +50 €, +100 €).
+   - Searchable, filterable transaction ledger table with color-coded type pills (Top-up, Purchase, Refund, Subscription Fee).
+   - Receipt modal for any past transaction with 1-click print.
+
+9. **Subscriptions & Quota Usability**:
+   - Clear plan feature comparison cards.
+   - Subscription status badge, countdown to renewal date, and 1-click renewal action.
+
+10. **Merchant Console & Employee Portal Usability**:
+    - Unified Merchant Dashboard with performance overview (revenue, total orders, low inventory alerts).
+    - Quick-edit product table for instant inventory and price updates.
+    - Order fulfillment workflow with customer shipping details, courier/tracking number input, and 1-click status transitions.
+
+11. **Admin Back-Office Usability**:
+    - High-level platform health metrics cards.
+    - Searchable, filterable user management table with role toggles and lock controls.
+    - Interactive audit log viewer with actor filters and timestamp formatting.
+
+12. **Definition of Done for Phase 16**:
+    - Every page tested and verified in real browser viewport sizes (mobile, tablet, desktop).
+    - Zero dead ends, confusing jargon, or unhandled error states.
+    - Zero browser console errors or unhandled promise rejections.
+    - All existing automated test suites (274+ tests) continue to pass with 100% success.
+
+

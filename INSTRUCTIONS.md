@@ -2703,6 +2703,62 @@ Perform:
 
 ---
 
+## Phase 16 — Comprehensive UI/UX Overhaul & Usability Polish (Production-Ready Implementation)
+
+The AI must review, overhaul, and **fully implement** the entire user interface across all views and user flows, transforming the platform from functional screens into an exceptionally intuitive, cohesive, delightful, and genuinely useful production-ready daily application:
+
+* **Production-Ready Implementation Mandate**:
+  * This is not a superficial design pass or conceptual mockup. Every feature must be **fully implemented, robust, and working end-to-end** in production condition.
+  * Real drag-and-drop file upload with live progress bars, speed metrics, and cancellation support.
+  * Real interactive in-browser file preview modals for pictures, streaming video, audio, and code/text documents.
+  * Real global non-blocking toast notifications replacing disruptive `alert()` and `confirm()` dialogs.
+  * Real 1-click clipboard link copying with instant visual confirmation.
+  * Real video player overlays with playback speed controls, theater/fullscreen mode, resume playback from timestamp, and keyboard shortcuts.
+  * Real quick-checkout with saved address prefill, balance check with top-up shortcut, and print-ready tax invoices.
+  * Real merchant console with fast inline stock editing and order fulfillment workflow.
+  * Real responsive mobile/tablet layout drawer navigation.
+  * Zero console errors, zero broken links, zero dead buttons, zero placeholder text, zero unhandled errors.
+
+* **Human-Centric Copy & Jargon Eradication**:
+  * **Strictly eliminate dry, robotic, internal engineering jargon** across all user-facing screens, marketing landing pages, dropzones, status badges, modals, and tooltips.
+  * Specific phrases to eliminate: *"Chunked multi-part streaming with SHA-256 integrity verification"*, *"Finalizing object assembly and SHA-256 verification"*, *"Content-addressed hexadecimal object storage"*, *"Argon2id cryptographic hash verifier"*, internal token prefixes, FastCGI references, etc.
+  * **Replace with clear, friendly, human-centric, benefit-driven product copy** that real everyday people actually want to read and understand (e.g., *"Fast & secure uploads, any file size"*, *"Finishing up your upload..."*, *"Generous 50 GB secure cloud storage"*, *"Watch movies in crisp HD with instant streaming"*).
+
+* **Global Design System & Feedback**:
+  * Unified, modern aesthetic (dark theme, crisp typography hierarchy, refined spacing, polished card layouts, smooth transitions).
+  * Non-blocking global toast notification system (success, warning, error, copy confirmations).
+  * Active route indicators, dynamic breadcrumbs, live cart badge counters, and responsive mobile navigation drawer.
+  * Informative, actionable empty states with prominent Call-To-Action buttons across every single screen.
+
+* **File Storage & Sharing Usability**:
+  * Drag-and-drop upload zone directly into the active folder.
+  * Upload progress indicators with transfer speeds and remaining time estimates.
+  * Multi-format file preview modal (images, HTML5 video/audio playback, syntax-highlighted code/text).
+  * Search, sort (name, size, modification date, type), and grid/list view toggles.
+  * 1-click share modal with instantaneous link copying, expiration selector, and password toggle.
+
+* **Media & Movie Streaming Experience**:
+  * Cinema-grade catalog with high-resolution poster grid, backdrop heroes, genre filters, and instant search.
+  * Rich movie detail modal (synopsis, director, runtime, cast, ratings, format badges).
+  * Feature-complete video player overlay with playback speed controls, theater/fullscreen mode, resume playback, and volume memory.
+
+* **Commerce, Cart & Invoicing Usability**:
+  * Visually stunning store directory and customizable merchant storefronts.
+  * Product modal with image gallery, variant pickers, quantity stepper, and live subtotal calculator.
+  * Floating/drawer shopping cart with real-time subscriber fee exemption banner (0.00 € vs 1.00 € fee).
+  * 1-click checkout with saved address prefill, balance sufficiency indicator, and direct top-up shortcut.
+  * Customer order history with live fulfillment timeline and official printable tax invoices.
+
+* **Merchant & Admin Operational Power**:
+  * High-productivity Merchant Console: sales metrics, low stock indicators, bulk inventory adjustments, and streamlined order fulfillment with tracking notes.
+  * Unified Admin Panel: complete user management, store oversight, billing audits, storage health monitoring, and system audit logs.
+
+* **Responsive & Accessibility Verification**:
+  * Verified across mobile, tablet, laptop, and desktop viewports with zero layout shifts or overflows.
+  * Full keyboard accessibility, visible focus rings, and zero console warnings/errors.
+
+---
+
 # 65. Antigravity Agent Organization
 
 Use specialized agents rather than one agent owning everything.

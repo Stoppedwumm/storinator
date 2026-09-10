@@ -10,6 +10,7 @@ import '../css/billing.css';
 import '../css/share.css';
 import '../css/movies.css';
 import '../css/stores.css';
+import '../css/orders.css';
 
 import { Router } from './router.js';
 import { renderHeader } from './components/header.js';
@@ -26,6 +27,8 @@ import { renderMovies } from './pages/movies.js';
 import { renderStores } from './pages/stores.js';
 import { renderStorefront } from './pages/storefront.js';
 import { renderPartnerStores } from './pages/partner-stores.js';
+import { renderCart } from './pages/cart.js';
+import { renderOrders } from './pages/orders.js';
 
 import { store } from './state.js';
 import { auth } from './auth.js';
@@ -67,6 +70,8 @@ function initApp() {
     '/partner/stores': () => renderPartnerStores(mainView),
     '/subscriptions': () => renderSubscriptions(mainView),
     '/wallet': () => renderWallet(mainView),
+    '/cart': () => renderCart(mainView),
+    '/orders': () => renderOrders(mainView),
     '/billing': () => renderBilling(mainView),
     '/s/:token': (params) => renderPublicShare(mainView, params.token),
   });

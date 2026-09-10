@@ -480,6 +480,73 @@ export class ApiClient {
   deleteStoreProduct(storeId, productId) {
     return this.delete(`/v1/partner/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}`);
   }
+
+  // Phase 11: Shopping Cart & Checkout API
+  getCart() {
+    return this.get('/v1/cart');
+  }
+
+  addToCart(storeId, productId, quantity = 1, variant = null) {
+    return this.post('/v1/cart/items', {
+      store_id: storeId,
+      product_id: productId,
+      quantity,
+      variant,
+    });
+  }
+
+  updateCartItem(cartItemId, quantity) {
+    return this.patch(`/v1/cart/items/${encodeURIComponent(cartItemId)}`, { quantity });
+  }
+
+  removeCartItem(cartItemId) {
+    return this.delete(`/v1/cart/items/${encodeURIComponent(cartItemId)}`);
+  }
+
+  clearCart(storeId = null) {
+    const query = storeId ? `?store_id=${encodeURIComponent(storeId)}` : '';
+    return this.delete(`/v1/cart${query}`);
+  }
+
+  checkout(checkoutData, idempotencyKey = null) {
+    const headers = {};
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+    return this.post('/v1/orders/checkout', checkoutData, { headers });
+  }
+
+  // Customer Orders API
+  getCustomerOrders(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.get(`/v1/orders${query ? '?' + query : ''}`);
+  }
+
+  getCustomerOrderDetail(orderId) {
+    return this.get(`/v1/orders/${encodeURIComponent(orderId)}`);
+  }
+
+  getOrderInvoice(orderId) {
+    return this.get(`/v1/orders/${encodeURIComponent(orderId)}/invoice`);
+  }
+
+  // Partner Store Orders & Fulfillment API
+  getPartnerOrders(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.get(`/v1/partner/orders${query ? '?' + query : ''}`);
+  }
+
+  getPartnerOrderDetail(orderId) {
+    return this.get(`/v1/partner/orders/${encodeURIComponent(orderId)}`);
+  }
+
+  fulfillPartnerOrder(orderId, notes = null) {
+    return this.patch(`/v1/partner/orders/${encodeURIComponent(orderId)}/fulfill`, { notes });
+  }
+
+  updatePartnerOrderStatus(orderId, status, notes = null) {
+    return this.patch(`/v1/partner/orders/${encodeURIComponent(orderId)}/status`, { status, notes });
+  }
 }
 
 export const api = new ApiClient();

@@ -299,11 +299,20 @@ function openProductModal(product, store, themeColor, rootEl) {
 
   // Add to cart click
   if (addBtn && isAvailable) {
-    addBtn.addEventListener('click', () => {
+    addBtn.addEventListener('click', async () => {
       const qty = parseInt(qtyInput.value, 10) || 1;
+      addBtn.disabled = true;
+      addBtn.textContent = '⏳ Adding...';
       
-      // Store cart item in localStorage for Phase 11 Cart & Checkout
       try {
+        // Sync to backend persistent cart
+        try {
+          await api.addToCart(store.id, product.id, qty, selectedVariant);
+        } catch (apiErr) {
+          console.warn('Backend cart sync note:', apiErr.message);
+        }
+
+        // Also store in localStorage as cache
         const cartKey = `cart_${store.id}`;
         const existingCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
         const existingIndex = existingCart.findIndex(item => item.productId === product.id && item.variant === selectedVariant);
@@ -328,13 +337,21 @@ function openProductModal(product, store, themeColor, rootEl) {
 
         feedbackEl.style.display = 'block';
         feedbackEl.style.color = 'var(--accent-emerald)';
-        feedbackEl.textContent = `✔ Added ${qty} item(s) to cart!`;
+        feedbackEl.innerHTML = `
+          <div>✔ Added ${qty} item(s) to cart!</div>
+          <a href="#/cart" class="btn btn-primary" style="display: inline-block; margin-top: 0.5rem; font-size: 0.8rem; padding: 0.35rem 0.85rem; text-decoration: none;">Proceed to Cart 🛒</a>
+        `;
         addBtn.textContent = '✔ Added';
         setTimeout(() => {
-          if (addBtn) addBtn.textContent = '🛒 Add to Cart';
-        }, 1500);
+          if (addBtn) {
+            addBtn.disabled = false;
+            addBtn.textContent = '🛒 Add to Cart';
+          }
+        }, 2000);
       } catch (e) {
         console.error('Failed to update cart', e);
+        addBtn.disabled = false;
+        addBtn.textContent = '🛒 Add to Cart';
       }
     });
   }
