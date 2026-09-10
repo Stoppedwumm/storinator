@@ -10,6 +10,7 @@ use App\Controllers\FileController;
 use App\Controllers\HealthController;
 use App\Controllers\RoleTestController;
 use App\Controllers\SubscriptionController;
+use App\Controllers\WalletController;
 use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
@@ -114,6 +115,19 @@ $router->post('/api/v1/partner/subscription-requests/{id}/reject', [Subscription
 $router->post('/api/partner/subscription-requests/{id}/reject', [SubscriptionController::class, 'rejectRequest'], [[AuthMiddleware::class, 'handle']]);
 $router->post('/api/v1/partner/subscriptions/{id}/renew', [SubscriptionController::class, 'renewSubscription'], [[AuthMiddleware::class, 'handle']]);
 $router->post('/api/partner/subscriptions/{id}/renew', [SubscriptionController::class, 'renewSubscription'], [[AuthMiddleware::class, 'handle']]);
+
+// Wallet & Ledger Endpoints (Spec Phase 6 & Section 28, 43)
+$router->get('/api/v1/wallet', [WalletController::class, 'getWallet'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/wallet', [WalletController::class, 'getWallet'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/wallet/transactions', [WalletController::class, 'getTransactions'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/wallet/transactions', [WalletController::class, 'getTransactions'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/wallet/topup', [WalletController::class, 'topup'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/wallet/topup', [WalletController::class, 'topup'], [[AuthMiddleware::class, 'handle']]);
+
+$router->post('/api/v1/partner/wallet/credit', [WalletController::class, 'partnerCredit'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/partner/wallet/credit', [WalletController::class, 'partnerCredit'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/partner/wallet/customers', [WalletController::class, 'listCustomers'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/partner/wallet/customers', [WalletController::class, 'listCustomers'], [[AuthMiddleware::class, 'handle']]);
 
 // Dispatch incoming request
 $router->dispatch($request);

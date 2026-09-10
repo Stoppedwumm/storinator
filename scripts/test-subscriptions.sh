@@ -142,7 +142,7 @@ else
 fi
 
 # Record partner debt before approval
-DEBT_BEFORE=$(docker compose exec -T backend php -r "require 'vendor/autoload.php'; \App\Core\Config::load(); \$db = \App\Core\Database::getConnection(); echo \$db->query('SELECT p.debt_cents FROM partners p JOIN users u ON p.user_id = u.id WHERE u.username = \"partner\"')->fetchColumn();")
+DEBT_BEFORE=$(docker compose exec -T webapp php -r "require 'vendor/autoload.php'; \App\Core\Config::load(); \$db = \App\Core\Database::getConnection(); echo \$db->query('SELECT p.debt_cents FROM partners p JOIN users u ON p.user_id = u.id WHERE u.username = \"partner\"')->fetchColumn();")
 
 # 10. Partner approves subscription
 echo "[Test 10] Partner approves subscription request..."
@@ -159,7 +159,7 @@ fi
 
 # 11. Verify partner debt increment and billing entry in database
 echo "[Test 11] Verifying partner debt increment & billing entry..."
-DEBT_AFTER=$(docker compose exec -T backend php -r "require 'vendor/autoload.php'; \App\Core\Config::load(); \$db = \App\Core\Database::getConnection(); echo \$db->query('SELECT p.debt_cents FROM partners p JOIN users u ON p.user_id = u.id WHERE u.username = \"partner\"')->fetchColumn();")
+DEBT_AFTER=$(docker compose exec -T webapp php -r "require 'vendor/autoload.php'; \App\Core\Config::load(); \$db = \App\Core\Database::getConnection(); echo \$db->query('SELECT p.debt_cents FROM partners p JOIN users u ON p.user_id = u.id WHERE u.username = \"partner\"')->fetchColumn();")
 EXPECTED_DEBT=$((DEBT_BEFORE + 300))
 
 if [ "${DEBT_AFTER}" -eq "${EXPECTED_DEBT}" ]; then
@@ -168,7 +168,7 @@ else
   fail "Partner debt mismatch: expected ${EXPECTED_DEBT}, got ${DEBT_AFTER}"
 fi
 
-BILLING_COUNT=$(docker compose exec -T backend php -r "require 'vendor/autoload.php'; \App\Core\Config::load(); \$db = \App\Core\Database::getConnection(); echo \$db->query('SELECT count(*) FROM partner_billing_entries WHERE reference_id = \"${SUB_ID}\" AND amount_cents = 300 AND operation_type = \"SUBSCRIPTION_RENEWAL\"')->fetchColumn();")
+BILLING_COUNT=$(docker compose exec -T webapp php -r "require 'vendor/autoload.php'; \App\Core\Config::load(); \$db = \App\Core\Database::getConnection(); echo \$db->query('SELECT count(*) FROM partner_billing_entries WHERE reference_id = \"${SUB_ID}\" AND amount_cents = 300 AND operation_type = \"SUBSCRIPTION_RENEWAL\"')->fetchColumn();")
 if [ "${BILLING_COUNT}" -ge 1 ]; then
   pass "Audit-compliant partner billing entry recorded for subscription activation"
 else
@@ -213,7 +213,7 @@ else
   fail "Subscription renewal failed: ${RENEW_RES}"
 fi
 
-DEBT_AFTER_RENEW=$(docker compose exec -T backend php -r "require 'vendor/autoload.php'; \App\Core\Config::load(); \$db = \App\Core\Database::getConnection(); echo \$db->query('SELECT p.debt_cents FROM partners p JOIN users u ON p.user_id = u.id WHERE u.username = \"partner\"')->fetchColumn();")
+DEBT_AFTER_RENEW=$(docker compose exec -T webapp php -r "require 'vendor/autoload.php'; \App\Core\Config::load(); \$db = \App\Core\Database::getConnection(); echo \$db->query('SELECT p.debt_cents FROM partners p JOIN users u ON p.user_id = u.id WHERE u.username = \"partner\"')->fetchColumn();")
 EXPECTED_DEBT_RENEW=$((EXPECTED_DEBT + 300))
 if [ "${DEBT_AFTER_RENEW}" -eq "${EXPECTED_DEBT_RENEW}" ]; then
   pass "Partner debt correctly incremented another 300 cents on renewal (${DEBT_AFTER_RENEW} cents total)"

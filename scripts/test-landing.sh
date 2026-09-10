@@ -45,11 +45,11 @@ echo "===================================================================="
 echo " Starting Phase 3 Landing Page & Teaser Verification Suite"
 echo "===================================================================="
 
-# Reset any prior rate-limiting for the test runner IP
-docker compose exec -T backend php -r "
+# Reset any prior rate-limiting for entry code tests
+docker compose exec -T webapp php -r "
     require 'vendor/autoload.php';
-    (new App\Services\RateLimiter())->clearEntryAttempts('127.0.0.1');
-    (new App\Services\RateLimiter())->clearEntryAttempts('172.19.0.1');
+    \App\Core\Config::load();
+    \App\Core\Database::getConnection()->exec(\"DELETE FROM login_attempts WHERE identifier = 'entry_code'\");
 " >/dev/null 2>&1 || true
 
 # Test 1: Public landing page HTML
@@ -135,7 +135,7 @@ rm -f "$COOKIE_JAR"
 # Test 10: Rate limiting brute force defense
 log_info "Testing brute-force rate limiter on entry endpoint (5 attempts allowed, then 429)..."
 # Clear attempts first
-docker compose exec -T backend php -r "
+docker compose exec -T webapp php -r "
     require 'vendor/autoload.php';
     (new App\Services\RateLimiter())->clearEntryAttempts('127.0.0.1');
     (new App\Services\RateLimiter())->clearEntryAttempts('172.19.0.1');
@@ -158,7 +158,7 @@ assert_true "Response error code is TOO_MANY_ATTEMPTS" "$(echo "$BODY" | grep -q
 
 # Test 11: Audit log record in database
 log_info "Testing database audit log for entry verifications..."
-AUDIT_COUNT=$(docker compose exec -T backend php -r "
+AUDIT_COUNT=$(docker compose exec -T webapp php -r "
     require 'vendor/autoload.php';
     use App\Core\Database;
     \$stmt = Database::getConnection()->query(\"SELECT count(*) FROM audit_logs WHERE action = 'ENTRY_CODE_VERIFIED'\");
@@ -167,10 +167,10 @@ AUDIT_COUNT=$(docker compose exec -T backend php -r "
 assert_true "Audit logs contain verified entry actions (count: $AUDIT_COUNT)" "$([ "$AUDIT_COUNT" -gt 0 ] && echo true || echo false)"
 
 # Cleanup test rate limits
-docker compose exec -T backend php -r "
+docker compose exec -T webapp php -r "
     require 'vendor/autoload.php';
-    (new App\Services\RateLimiter())->clearEntryAttempts('127.0.0.1');
-    (new App\Services\RateLimiter())->clearEntryAttempts('172.19.0.1');
+    \App\Core\Config::load();
+    \App\Core\Database::getConnection()->exec(\"DELETE FROM login_attempts WHERE identifier = 'entry_code'\");
 " >/dev/null 2>&1 || true
 
 echo "===================================================================="

@@ -22,8 +22,9 @@ echo "===================================================="
 # 1. Restore Backend SQLite
 if [ -f "${RESTORE_DIR}/backend.sqlite" ]; then
     echo "[1/2] Restoring Backend Database..."
-    if docker ps --format '{{.Names}}' | grep -q 'platform-backend'; then
-        docker cp "${RESTORE_DIR}/backend.sqlite" platform-backend:/data/backend.sqlite
+    BACKEND_CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'platform-(webapp|backend)' | head -n 1 || true)
+    if [ -n "$BACKEND_CONTAINER" ]; then
+        docker cp "${RESTORE_DIR}/backend.sqlite" "${BACKEND_CONTAINER}:/data/backend.sqlite"
     else
         cp "${RESTORE_DIR}/backend.sqlite" ./backend/data/backend.sqlite
     fi

@@ -86,6 +86,11 @@ class Request
         return $this->queryParams[$key] ?? $default;
     }
 
+    public function getQueryParams(): array
+    {
+        return $this->queryParams;
+    }
+
     public function getBody(?string $key = null, mixed $default = null): mixed
     {
         if ($key === null) {

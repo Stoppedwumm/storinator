@@ -228,6 +228,36 @@ export class ApiClient {
   renewSubscription(id) {
     return this.post(`/v1/partner/subscriptions/${encodeURIComponent(id)}/renew`);
   }
+
+  // Wallet API endpoints (Spec Phase 6)
+  getWallet() {
+    return this.get('/v1/wallet');
+  }
+
+  getWalletTransactions(limit = 20, offset = 0) {
+    return this.get(`/v1/wallet/transactions?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`);
+  }
+
+  topupWallet(amountCents, idempotencyKey = null, description = null) {
+    const headers = {};
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+    return this.post('/v1/wallet/topup', { amount_cents: amountCents, description }, { headers });
+  }
+
+  partnerCreditCustomer(identifier, amountCents, notes = '', idempotencyKey = null) {
+    const headers = {};
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+    return this.post('/v1/partner/wallet/credit', { identifier, amount_cents: amountCents, notes }, { headers });
+  }
+
+  getPartnerCustomers(search = '') {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.get(`/v1/partner/wallet/customers${query}`);
+  }
 }
 
 export const api = new ApiClient();

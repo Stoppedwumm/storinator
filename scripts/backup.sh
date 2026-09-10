@@ -12,11 +12,12 @@ echo "Starting Platform Backup -> ${BACKUP_DIR}"
 echo "===================================================="
 
 # 1. Back up backend SQLite safely via docker container or host
-if docker ps --format '{{.Names}}' | grep -q 'platform-backend'; then
-    echo "[1/3] Backing up Backend Database (Docker)..."
-    docker exec platform-backend sqlite3 /data/backend.sqlite ".backup '/data/backend_backup.sqlite'"
-    docker cp platform-backend:/data/backend_backup.sqlite "${BACKUP_DIR}/backend.sqlite"
-    docker exec platform-backend rm -f /data/backend_backup.sqlite
+BACKEND_CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'platform-(webapp|backend)' | head -n 1 || true)
+if [ -n "$BACKEND_CONTAINER" ]; then
+    echo "[1/3] Backing up Backend Database (${BACKEND_CONTAINER})..."
+    docker exec "$BACKEND_CONTAINER" sqlite3 /data/backend.sqlite ".backup '/data/backend_backup.sqlite'"
+    docker cp "${BACKEND_CONTAINER}:/data/backend_backup.sqlite" "${BACKUP_DIR}/backend.sqlite"
+    docker exec "$BACKEND_CONTAINER" rm -f /data/backend_backup.sqlite
 else
     echo "[1/3] Backend container not running, checking local files..."
     if [ -f "./backend/data/backend.sqlite" ]; then

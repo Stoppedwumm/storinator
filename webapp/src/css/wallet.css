@@ -1,0 +1,311 @@
+/* AETHER Platform - Wallet & Ledger Styles */
+.wallet-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.wallet-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary, #f8fafc);
+  letter-spacing: -0.03em;
+  margin-bottom: 0.35rem;
+}
+
+.wallet-header p {
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.95rem;
+}
+
+.wallet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 860px) {
+  .wallet-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wallet-card {
+  background: var(--bg-card, #111827);
+  border: 1px solid var(--border-color, #1f2937);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.wallet-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-primary, #6366f1), var(--accent-cyan, #06b6d4));
+}
+
+.wallet-balance-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.wallet-balance-amount {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: var(--text-primary, #f8fafc);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.wallet-currency-badge {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent-primary, #6366f1);
+  background: rgba(99, 102, 241, 0.15);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  letter-spacing: normal;
+}
+
+.wallet-subtext {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #94a3b8);
+  margin-top: 0.5rem;
+}
+
+/* Top-up Form */
+.topup-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.preset-btn {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  padding: 0.6rem 0.5rem;
+  border-radius: var(--radius-md, 8px);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.preset-btn:hover, .preset-btn.active {
+  background: var(--accent-primary, #6366f1);
+  border-color: var(--accent-primary, #6366f1);
+  color: #ffffff;
+}
+
+.wallet-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.wallet-form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary, #94a3b8);
+  margin-bottom: 0.4rem;
+}
+
+.wallet-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.wallet-input-symbol {
+  position: absolute;
+  left: 1rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.wallet-input {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.75rem 1rem 0.75rem 2.25rem;
+  color: #f8fafc;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: border-color 0.2s;
+}
+
+.wallet-input:focus {
+  outline: none;
+  border-color: var(--accent-primary, #6366f1);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.wallet-btn-submit {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-primary, #6366f1), #4f46e5);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.85rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.wallet-btn-submit:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.wallet-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Transactions Table */
+.wallet-ledger-card {
+  background: var(--bg-card, #111827);
+  border: 1px solid var(--border-color, #1f2937);
+  border-radius: var(--radius-lg, 12px);
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  margin-top: 2rem;
+}
+
+.wallet-ledger-header {
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid var(--border-color, #1f2937);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.wallet-ledger-header h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary, #f8fafc);
+}
+
+.wallet-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.wallet-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.wallet-table th {
+  background: #0b0f19;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid #1f2937;
+}
+
+.wallet-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #1f2937;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+}
+
+.wallet-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Amount Badges */
+.amount-positive {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.amount-negative {
+  color: #f43f5e;
+  font-weight: 700;
+}
+
+.type-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.type-customer-topup {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.type-partner-topup {
+  background: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+}
+
+.type-order-payment, .type-subscription-payment {
+  background: rgba(244, 63, 94, 0.15);
+  color: #f43f5e;
+}
+
+.type-default {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+/* Pagination */
+.wallet-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.75rem;
+  background: #0b0f19;
+  border-top: 1px solid #1f2937;
+}
+
+/* Partner section */
+.partner-credit-card {
+  margin-top: 2rem;
+  background: #0d1527;
+  border: 1px solid #1e3a5f;
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.75rem;
+}

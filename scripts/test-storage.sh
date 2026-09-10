@@ -37,6 +37,15 @@ fi
 
 AUTH_HEADER="Authorization: Bearer ${TOKEN}"
 
+# Ensure test customer has an active subscription for Phase 5+ storage access
+docker compose exec -T webapp php -r "
+    require 'vendor/autoload.php';
+    use App\Core\Database;
+    \$pdo = Database::getConnection();
+    \$stmt = \$pdo->prepare('INSERT OR REPLACE INTO subscriptions (id, user_id, partner_id, plan_id, status, current_period_start, current_period_end) VALUES (\"sub_test_storage\", \"usr_cust_00000001\", \"par_000000000000000000000001\", \"plan_storage_50gib\", \"ACTIVE\", datetime(\"now\"), datetime(\"now\", \"+30 days\"))');
+    \$stmt->execute();
+" >/dev/null 2>&1 || true
+
 # 2. Get initial quota
 echo "[Test 2] Querying storage quota..."
 QUOTA_RES=$(curl -s -X GET "${BASE_URL}/api/v1/storage/quota" -H "${AUTH_HEADER}")

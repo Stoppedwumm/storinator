@@ -21,7 +21,7 @@ PASSED=0
 FAILED=0
 
 # Ensure clean slate for test runner IP
-docker compose exec -T backend php -r "
+docker compose exec -T webapp php -r "
     require 'vendor/autoload.php';
     use App\Core\Database;
     Database::getConnection()->exec('DELETE FROM login_attempts');
@@ -185,7 +185,7 @@ BLOCKED_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/v1/auth
   -H "Content-Type: application/json" \
   -d "{\"identifier\":\"$TARGET_USER\",\"password\":\"wrong\"}")
 assert_eq "$BLOCKED_CODE" "429" "Rate limit 429"
-docker compose exec -T backend php -r "
+docker compose exec -T webapp php -r "
     require 'vendor/autoload.php';
     use App\Core\Database;
     Database::getConnection()->exec('DELETE FROM login_attempts');

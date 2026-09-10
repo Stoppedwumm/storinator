@@ -5,6 +5,7 @@ import '../css/landing.css';
 import '../css/dashboard.css';
 import '../css/files.css';
 import '../css/subscriptions.css';
+import '../css/wallet.css';
 import '../css/movies.css';
 import '../css/stores.css';
 
@@ -16,6 +17,7 @@ import { renderHealth } from './pages/health.js';
 import { renderLogin } from './pages/login.js';
 import { renderFiles } from './pages/files.js';
 import { renderSubscriptions } from './pages/subscriptions.js';
+import { renderWallet } from './pages/wallet.js';
 
 import { store } from './state.js';
 import { auth } from './auth.js';
@@ -52,6 +54,7 @@ function initApp() {
     '/login': () => renderLogin(mainView),
     '/files': () => renderFiles(mainView),
     '/subscriptions': () => renderSubscriptions(mainView),
+    '/wallet': () => renderWallet(mainView),
   });
 
   router.init();

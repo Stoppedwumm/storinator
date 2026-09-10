@@ -3,45 +3,39 @@
 ## 1. System Architecture Overview
 
 ```text
-                               Public Internet
-                                      |
-                                      v
+                              Public Internet
+                                     |
+                                     v
              +--------------------------------------------------+
-             |                 Webapp (Nginx)                   |
-             |  - Static Assets (Webpack Bundle, HTML5/CSS/JS)   |
-             |  - Reverse Proxy for /api/*                      |
-             |  - Port 80 (external: ${PORT:-8080})             |
+             |            Webapp Container (Nginx + PHP)        |
+             |  - Static Assets (Webpack Bundle, HTML5/CSS/JS)  |
+             |  - High-performance FastCGI route for /api/*    |
+             |  - PHP 8.4-FPM Execution Engine                  |
+             |  - Centralized Auth & Business Rules (backend/)  |
+             |  - SQLite Database (/data/backend.sqlite)       |
+             |  - Port 80 (external: ${PORT:-8080})            |
              +--------------------------------------------------+
-                                      |
-                           (Docker frontend_net)
-                                      |
-                                      v
-             +--------------------------------------------------+
-             |                  Backend (PHP)                   |
-             |  - PHP 8.4+ Built-in Server / FPM (:8000)        |
-             |  - REST-style JSON API                           |
-             |  - Centralized Auth & Business Rules             |
-             |  - SQLite Database (/data/backend.sqlite)        |
-             +--------------------------------------------------+
-                                      |
-                           (Docker backend_net)
-                         (X-Internal-Service-Token)
-                                      |
-                                      v
+                                     |
+                          (Docker backend_net)
+                        (X-Internal-Service-Token)
+                                     |
+                                     v
              +--------------------------------------------------+
              |                 BigStore (Node)                  |
              |  - Node.js 24 + Express (:8080)                  |
              |  - Storage, Range Streaming, Quota Accounting    |
              |  - Chunked Upload Assembly                       |
-             |  - SQLite Database (/data/databases/bigstore.db) |
+             |  - SQLite Database (/data/databases/bigstore.db)|
              +--------------------------------------------------+
 ```
 
-### Network Isolation Policy
-- **External -> Webapp**: Host port mapped to Nginx container.
-- **Webapp -> Backend**: Routed internally via `frontend_net`. BigStore is NOT on `frontend_net`.
-- **Backend -> BigStore**: Routed internally via `backend_net` using authenticated secret tokens.
-- **Webapp -> BigStore**: Direct communication is physically impossible via network isolation.
+### Architecture Decision: Webapp & Backend Container Consolidation
+- **Decision (Executive Directive):** Consolidate the PHP backend runtime into the `webapp` container alongside Nginx and PHP 8.4-FPM, processing `/api/*` requests locally over FastCGI (`127.0.0.1:9000`).
+- **Rationale:** Resolves Docker multi-bridge network race conditions, eliminates cross-container DNS and TCP connection timeouts, and delivers sub-millisecond API execution while preserving codebase cleanliness (`webapp/` for frontend SPA, `backend/` for PHP business logic).
+- **Network Isolation Policy:**
+  - **External -> Webapp**: Host port mapped to Nginx (`${PORT:-8080}:80`).
+  - **Webapp Internal**: Nginx talks to PHP 8.4-FPM over FastCGI loopback (`127.0.0.1:9000`).
+  - **Backend -> BigStore**: Routed internally via unified container network `platform_net` using authenticated service secret tokens. BigStore publishes zero host port mappings and is strictly shielded from external access.
 
 ---
 
@@ -53,8 +47,8 @@
 | **Phase 2** | **Authentication** | Users, Roles (CUSTOMER, PARTNER, ADMIN), Argon2id passwords, Sessions (SHA-256 tokens), centralized AuthMiddleware & RoleMiddleware, brute-force rate limiter, test accounts seed, test suite. | **COMPLETED** |
 | **Phase 3** | **Landing Page** | Corporate minimal teaser website, secret access code input in search bar, server-side code validation, rate limiter, session unlock to login. | **COMPLETED** |
 | **Phase 4** | **BigStore Core** | Physical hashed storage paths, directory trees, file metadata, chunked streaming uploads, checksums, quota validation, HTTP Range streaming, file manager UI. | **COMPLETED** |
-| **Phase 5** | Subscriptions | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates; **Subscription pricing: 3.00€/month (300 cents)** billed against partner; platform fee exemption. | Up Next |
-| **Phase 6** | Wallet & Ledger | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | Pending |
+| **Phase 5** | **Subscriptions** | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates; **Subscription pricing: 3.00€/month (300 cents)** billed against partner; platform fee exemption; automated test suite. | **COMPLETED** |
+| **Phase 6** | **Wallet & Ledger** | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | Up Next |
 | **Phase 7** | Partner Billing | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | Pending |
 | **Phase 8** | File Sharing | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | Pending |
 | **Phase 9** | Movie Mode & Streaming | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | Pending |
@@ -294,19 +288,54 @@ In accordance with financial integrity rules (Rule 6: integer minor units only, 
 
 ---
 
-## 8. Stopped / Next Steps
+## 8. Phase 5 Detailed Deliverables & Checklist (Subscriptions & Storage Quota Assignment)
 
-- **Where We Stopped**: Completed and verified Phase 4 (BigStore Core Storage Engine & Streaming Uploads). All 59 tests across health, auth, landing, bigstore, and storage pass cleanly.
-- **Next Phase**: **Phase 5 — Subscriptions & Storage Quota Assignment**.
-  - Scope:
-    - Subscriptions database schema & migrations in Backend SQLite (`subscriptions`, `subscription_requests`, `subscription_history`).
-    - Customer subscription request workflow (`POST /api/v1/subscriptions/request`).
-    - Partner & Admin approval/rejection workflows (`POST /api/v1/subscriptions/{id}/approve`, `POST /api/v1/subscriptions/{id}/reject`).
-    - Status lifecycle (`PENDING`, `ACTIVE`, `REJECTED`, `EXPIRED`, `CANCELLED`).
-    - Quota synchronization with BigStore (activating 50 GiB quota upon active subscription, restricting when expired/cancelled).
-    - Recurring monthly subscription charge: **3.00€ / month** (`300` cents) accumulating against partner debt ledger.
-    - Zero platform fee exemption eligibility flag for active subscribers.
-    - Frontend subscription management UI in Webapp (Customer subscription request button, Partner/Admin request review table).
-    - Automated test suite `scripts/test-subscriptions.sh`.
+- [x] Subscriptions Database Schema & Migrations (`backend/migrations/003_subscriptions.sql`):
+  - [x] `subscriptions` table tracking active periods, statuses (`ACTIVE`, `CANCELLED`, `EXPIRED`), auto-renewal, and user/partner mappings.
+  - [x] `subscription_requests` table with lifecycle states (`REQUESTED`, `APPROVED`, `REJECTED`), rejection reasons, resolved timestamps, and admin/partner actor IDs.
+  - [x] `subscription_events` audit table recording state transitions.
+  - [x] `partner_billing_entries` integration recording 300 minor cents per subscription activation/renewal against partner debt ledger.
+- [x] Backend Subscription Service & Controller (`backend/src/Services/SubscriptionService.php`, `backend/src/Controllers/SubscriptionController.php`):
+  - [x] Customer subscription request endpoint (`POST /api/v1/subscriptions/request`) with duplicate pending request prevention (HTTP 409 Conflict).
+  - [x] Current subscription and fee-exemption query (`GET /api/v1/subscriptions/current`).
+  - [x] Customer subscription self-cancellation (`POST /api/v1/subscriptions/cancel`).
+  - [x] Partner & Admin pending requests query (`GET /api/v1/partner/subscription-requests`).
+  - [x] Partner approval endpoint (`POST /api/v1/partner/subscription-requests/{id}/approve`) atomically activating subscription, increasing `partners.debt_cents` by 300 cents, and inserting an immutable `SUBSCRIPTION_RENEWAL` billing entry.
+  - [x] Partner rejection endpoint (`POST /api/v1/partner/subscription-requests/{id}/reject`) with optional reason.
+  - [x] Partner renewal endpoint (`POST /api/v1/partner/subscriptions/{id}/renew`) extending active period by 30 days and incrementing partner debt by 300 cents.
+  - [x] Storage access gate (`backend/src/Controllers/FileController.php`) strictly requiring active subscription for file upload and directory creation, returning HTTP 403 `SUBSCRIPTION_REQUIRED` otherwise.
+- [x] Frontend Webapp Subscription Management UI (`webapp/src/`):
+  - [x] Customer subscription portal (`webapp/src/js/pages/subscriptions.js`):
+    - [x] Real-time subscription status badge (`ACTIVE`, `PENDING`, `INACTIVE`, `CANCELLED`).
+    - [x] 50 GiB storage quota allotment indicator and fee exemption highlight (0.00€ vs 1.00€).
+    - [x] Direct request button and self-service cancellation with confirmation.
+  - [x] Partner & Admin Review Queue:
+    - [x] Pending requests table with customer details, requested timestamps, and notes.
+    - [x] One-click approval button clearly indicating 3.00€ debt accrual.
+    - [x] One-click rejection button prompting for rejection reason.
+  - [x] File Manager Integration (`webapp/src/js/pages/files.js`):
+    - [x] Direct warning alert when storage actions are blocked due to `SUBSCRIPTION_REQUIRED` with 1-click CTA button redirecting to `#/subscriptions`.
+  - [x] Stylesheet (`webapp/src/css/subscriptions.css`) integrated into Webpack bundle with glassmorphic cards and badges.
+  - [x] Navigation links in top header and login dashboard.
+- [x] Automated Test Suite & Regression Verification:
+  - [x] `scripts/test-subscriptions.sh`: 18/18 checks passed.
+  - [x] Zero regressions across all prior test suites (`test-health.sh`, `test-auth.sh`, `test-landing.sh`, `test-storage.sh`).
+
+---
+
+## 9. Next Steps: Phase 6 — Wallet & Ledger System
+
+- **Where We Are**: Completed and verified Phase 5 (Subscriptions & Storage Quota Assignment). All 18 subscription tests pass.
+- **Immediate Focus**: **Phase 6 — Wallet & Ledger System**
+  - **Core Requirements**:
+    1. Integer cents currency representation (`EUR`, Rule 6). Zero floating-point arithmetic.
+    2. Customer wallet balance querying (`GET /api/v1/wallet`).
+    3. Append-only ledger mutations (`wallet_ledger`, Rule 7) for all balance changes: `DEPOSIT`, `PURCHASE`, `REFUND`.
+    4. Strict idempotency key support on write operations (`Idempotency-Key` HTTP header).
+    5. Atomic top-up execution (`POST /api/v1/wallet/topup`) updating wallet balance and writing ledger entries within single database transaction.
+    6. Partner balance allocation capabilities.
+    7. Concurrency safeguards (SQLite WAL mode + immediate/exclusive transactions).
+    8. Frontend Wallet & Balance UI widget in header and dedicated wallet management view.
+    9. Automated test suite `scripts/test-wallet.sh` verifying ledger immutability, balance arithmetic, and idempotency.
 
 

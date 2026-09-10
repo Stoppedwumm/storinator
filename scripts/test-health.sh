@@ -97,7 +97,7 @@ fi
 
 # 8. Verify BigStore Service Token Authentication inside Container Network
 echo "[8] Verifying BigStore Service Token Security inside container ..."
-BIGSTORE_SEC_TEST=$(docker exec platform-backend php -r '
+BIGSTORE_SEC_TEST=$(docker exec platform-webapp php -r '
     $ch = curl_init("http://bigstore:8080/internal/health");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $res = curl_exec($ch);
