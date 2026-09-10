@@ -48,8 +48,8 @@
 | **Phase 3** | **Landing Page** | Corporate minimal teaser website, secret access code input in search bar, server-side code validation, rate limiter, session unlock to login. | **COMPLETED** |
 | **Phase 4** | **BigStore Core** | Physical hashed storage paths, directory trees, file metadata, chunked streaming uploads, checksums, quota validation, HTTP Range streaming, file manager UI. | **COMPLETED** |
 | **Phase 5** | **Subscriptions** | 50 GiB storage quota assignment, request/approval/reject workflow, expiration dates; **Subscription pricing: 3.00€/month (300 cents)** billed against partner; platform fee exemption; automated test suite. | **COMPLETED** |
-| **Phase 6** | **Wallet & Ledger** | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | Up Next |
-| **Phase 7** | Partner Billing | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | Pending |
+| **Phase 6** | **Wallet & Ledger** | Integer cents balance, append-only transaction ledger, atomic top-up, partner top-up balance allocation, concurrency safeguards. | **COMPLETED** |
+| **Phase 7** | Partner Billing | Partner debt accumulation from top-ups and renewals, admin partial/full debt payment settlement, immutable billing ledgers. | Up Next |
 | **Phase 8** | File Sharing | Random token share URLs (/s/{token}), download permissions, password protection, view counters, expiration dates. | Pending |
 | **Phase 9** | Movie Mode & Streaming | Media file scanning, filename parsing, TMDB/OMDb scraping, cover/backdrop display, HTTP Range streaming with short-lived tokens. | Pending |
 | **Phase 10** | Storefronts | Multi-store partner management, slugs, branding, categories, product variants, inventory, BigStore asset storage. | Pending |
@@ -323,19 +323,58 @@ In accordance with financial integrity rules (Rule 6: integer minor units only, 
 
 ---
 
-## 9. Next Steps: Phase 6 — Wallet & Ledger System
+## 9. Phase 6 Detailed Deliverables & Checklist (Wallet & Ledger System)
 
-- **Where We Are**: Completed and verified Phase 5 (Subscriptions & Storage Quota Assignment). All 18 subscription tests pass.
-- **Immediate Focus**: **Phase 6 — Wallet & Ledger System**
+- [x] Database Migrations (`backend/migrations/004_wallets.sql`):
+  - [x] `wallets` table storing user balances in integer minor cents (EUR) with timestamps and foreign keys.
+  - [x] `wallet_transactions` table enforcing append-only ledger mutations with transaction types (`CUSTOMER_TOPUP`, `PARTNER_TOPUP`, `ORDER_PAYMENT`, `SUBSCRIPTION_PAYMENT`), balance before/after snapshots, and idempotency key constraints.
+  - [x] Pre-seeded wallet accounts for default test users.
+- [x] Backend Wallet Service & Controller (`backend/src/Services/WalletService.php`, `backend/src/Controllers/WalletController.php`):
+  - [x] Strict integer cents accounting (Rule 6). Floating point currency eliminated.
+  - [x] Append-only ledger mutations (Rule 7) recording balance snapshots.
+  - [x] SQLite WAL mode and immediate atomic locking (`BEGIN IMMEDIATE`) with SQL `RETURNING` clauses preventing race conditions and lost updates under concurrency.
+  - [x] Database-level overdraft protection (`WHERE id = :wid AND balance_cents >= :amount`).
+  - [x] Customer balance query (`GET /api/v1/wallet`).
+  - [x] Paginated transaction history with type filtering (`GET /api/v1/wallet/transactions`).
+  - [x] Idempotent direct top-up endpoint (`POST /api/v1/wallet/topup`) supporting `Idempotency-Key` headers.
+  - [x] Partner customer credit facility (`POST /api/v1/partner/wallet/credit`) with dual-entry accounting: customer balance credited and partner debt incremented with partner billing entry (Rule 8).
+  - [x] Partner customer directory listing with balances (`GET /api/v1/partner/wallet/customers`).
+  - [x] Centralized route registration with `AuthMiddleware` in `backend/public/index.php`.
+- [x] Frontend Webapp Wallet & Ledger UI (`webapp/`):
+  - [x] Responsive dark glassmorphic wallet page (`webapp/src/js/pages/wallet.js`).
+  - [x] Live balance hero display with formatted minor cents.
+  - [x] Instant top-up form with preset buttons (+5€, +10€, +20€, +50€) and custom euro inputs.
+  - [x] Partner customer credit panel for `PARTNER` / `ADMIN` roles.
+  - [x] Paginated audit ledger table with colored amount indicators and transaction badges.
+  - [x] Custom styling (`webapp/src/css/wallet.css`) compiled into Webpack bundle.
+  - [x] "Wallet" navigation link added to top header (`webapp/src/js/components/header.js`).
+  - [x] Route registration in SPA router (`webapp/src/js/app.js`).
+- [x] Automated Test Suite & Regression Verification:
+  - [x] `scripts/test-wallet.sh`: 37/37 automated checks passing:
+    - Unauthenticated 401 rejection on wallet and topup endpoints.
+    - Initial 0.00€ balance for new customer accounts.
+    - Input validation rejecting negative, zero, and out-of-bounds amounts (HTTP 422).
+    - Customer topup balance increments and ledger transaction snapshots.
+    - Idempotency key replay test preventing duplicate balance crediting.
+    - Ledger transaction history pagination with limit and offset.
+    - Role-based authorization: customer forbidden from partner credit endpoint (HTTP 403).
+    - Partner credit execution: customer balance increment, partner debt increment, and partner billing entry creation.
+    - Partner customer search and directory listing with balances.
+    - Wallet Service overdraft protection returning HTTP 402 Insufficient Funds.
+    - High-concurrency race condition test verifying zero lost updates across concurrent requests.
+  - [x] Zero regressions across all prior test suites: **107 passing checks across 6 test suites**.
+
+---
+
+## 10. Next Steps: Phase 7 — Partner Billing & Debt Settlement
+
+- **Where We Are**: Completed and verified Phase 6 (Wallet & Ledger System). All 37 wallet tests pass.
+- **Immediate Focus**: **Phase 7 — Partner Billing & Debt Settlement**
   - **Core Requirements**:
-    1. Integer cents currency representation (`EUR`, Rule 6). Zero floating-point arithmetic.
-    2. Customer wallet balance querying (`GET /api/v1/wallet`).
-    3. Append-only ledger mutations (`wallet_ledger`, Rule 7) for all balance changes: `DEPOSIT`, `PURCHASE`, `REFUND`.
-    4. Strict idempotency key support on write operations (`Idempotency-Key` HTTP header).
-    5. Atomic top-up execution (`POST /api/v1/wallet/topup`) updating wallet balance and writing ledger entries within single database transaction.
-    6. Partner balance allocation capabilities.
-    7. Concurrency safeguards (SQLite WAL mode + immediate/exclusive transactions).
-    8. Frontend Wallet & Balance UI widget in header and dedicated wallet management view.
-    9. Automated test suite `scripts/test-wallet.sh` verifying ledger immutability, balance arithmetic, and idempotency.
+    1. Partner debt ledger tracking accumulated debt from subscription approvals (3.00€ / 300 cents) and customer wallet credits.
+    2. Admin debt payment settlement interface and endpoint (`POST /api/v1/admin/billing/settle`) allowing partial or full payment of partner debt.
+    3. Immutable partner payment ledger (`partner_payment_entries`) recording payment date, amount, method, notes, and admin user ID.
+    4. Partner billing portal view (`GET /api/v1/partner/billing`) showing current debt, line-item charge history, and payment history.
+    5. Automated test suite `scripts/test-billing.sh` verifying partner debt calculations, admin debt settlement, and invoice ledger integrity.
 
 

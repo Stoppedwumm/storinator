@@ -180,25 +180,22 @@ class WalletService
             }
         }
 
-        $this->pdo->beginTransaction();
+        $this->pdo->exec('BEGIN IMMEDIATE');
         try {
-            // Lock and retrieve current wallet balance
-            $stmt = $this->pdo->prepare('SELECT balance_cents FROM wallets WHERE id = :wid');
-            $stmt->execute([':wid' => $walletId]);
-            $currentBalance = (int)$stmt->fetchColumn();
-
-            $newBalance = $currentBalance + $amountCents;
-
-            // Update wallet balance
+            // Atomically update balance in database using RETURNING
             $update = $this->pdo->prepare('
                 UPDATE wallets
-                SET balance_cents = :new_balance, updated_at = datetime("now")
+                SET balance_cents = balance_cents + :amount, updated_at = datetime("now")
                 WHERE id = :wid
+                RETURNING balance_cents
             ');
             $update->execute([
-                ':new_balance' => $newBalance,
+                ':amount' => $amountCents,
                 ':wid' => $walletId,
             ]);
+            $newBalance = (int)$update->fetchColumn();
+            $update->closeCursor();
+            $currentBalance = $newBalance - $amountCents;
 
             // Append-only ledger mutation (Rule 7)
             $txId = 'wtx_' . bin2hex(random_bytes(12));
@@ -347,27 +344,23 @@ class WalletService
             }
         }
 
-        $this->pdo->beginTransaction();
+        $this->pdo->exec('BEGIN IMMEDIATE');
         try {
-            // 1. Lock customer wallet and get current balance
-            $wStmt = $this->pdo->prepare('SELECT balance_cents FROM wallets WHERE id = :wid');
-            $wStmt->execute([':wid' => $customerWalletId]);
-            $currentBalance = (int)$wStmt->fetchColumn();
-
-            $newBalance = $currentBalance + $amountCents;
-
-            // 2. Update customer wallet balance
+            // 1. Atomically update customer wallet balance and return updated balance
             $wUpdate = $this->pdo->prepare('
                 UPDATE wallets
-                SET balance_cents = :new_balance, updated_at = datetime("now")
+                SET balance_cents = balance_cents + :amount, updated_at = datetime("now")
                 WHERE id = :wid
+                RETURNING balance_cents
             ');
             $wUpdate->execute([
-                ':new_balance' => $newBalance,
+                ':amount' => $amountCents,
                 ':wid' => $customerWalletId,
             ]);
+            $newBalance = (int)$wUpdate->fetchColumn();
+            $wUpdate->closeCursor();
 
-            // 3. Append customer wallet ledger transaction (Rule 7)
+            // 2. Append customer wallet ledger transaction (Rule 7)
             $txId = 'wtx_' . bin2hex(random_bytes(12));
             $now = date('Y-m-d H:i:s');
             $desc = $notes ? trim($notes) : sprintf('Credit from %s', $partner['company_name'] ?? 'Partner');
@@ -394,22 +387,21 @@ class WalletService
                 ':created_at' => $now,
             ]);
 
-            // 4. Increase partner debt (debt_cents + amount_cents) and record partner billing entry (Rule 8)
+            // 3. Atomically increase partner debt (debt_cents + amount_cents) and record partner billing entry (Rule 8)
             $partnerDebtAfter = 0;
             if ($partner['id'] !== 'par_platform_admin') {
                 $pUpdate = $this->pdo->prepare('
                     UPDATE partners
                     SET debt_cents = debt_cents + :amount, updated_at = datetime("now")
                     WHERE id = :pid
+                    RETURNING debt_cents
                 ');
                 $pUpdate->execute([
                     ':amount' => $amountCents,
                     ':pid' => $partner['id'],
                 ]);
-
-                $pDebtStmt = $this->pdo->prepare('SELECT debt_cents FROM partners WHERE id = :pid');
-                $pDebtStmt->execute([':pid' => $partner['id']]);
-                $partnerDebtAfter = (int)$pDebtStmt->fetchColumn();
+                $partnerDebtAfter = (int)$pUpdate->fetchColumn();
+                $pUpdate->closeCursor();
 
                 $pbeId = 'pbe_' . bin2hex(random_bytes(12));
                 $pbeInsert = $this->pdo->prepare('
@@ -507,13 +499,28 @@ class WalletService
             }
         }
 
-        $this->pdo->beginTransaction();
+        $this->pdo->exec('BEGIN IMMEDIATE');
         try {
-            $stmt = $this->pdo->prepare('SELECT balance_cents FROM wallets WHERE id = :wid');
-            $stmt->execute([':wid' => $walletId]);
-            $currentBalance = (int)$stmt->fetchColumn();
+            // Atomically decrement balance with database-level overdraft guard
+            $update = $this->pdo->prepare('
+                UPDATE wallets
+                SET balance_cents = balance_cents - :amount, updated_at = datetime("now")
+                WHERE id = :wid AND balance_cents >= :amount
+                RETURNING balance_cents
+            ');
+            $update->execute([
+                ':amount' => $amountCents,
+                ':wid' => $walletId,
+            ]);
+            $res = $update->fetchColumn();
 
-            if ($currentBalance < $amountCents) {
+            if ($res === false) {
+                $update->closeCursor();
+                $currStmt = $this->pdo->prepare('SELECT balance_cents FROM wallets WHERE id = :wid');
+                $currStmt->execute([':wid' => $walletId]);
+                $currentBalance = (int)$currStmt->fetchColumn();
+                $currStmt->closeCursor();
+
                 throw new Exception(
                     sprintf(
                         'Insufficient funds. Current balance: %s, required: %s.',
@@ -524,17 +531,9 @@ class WalletService
                 );
             }
 
-            $newBalance = $currentBalance - $amountCents;
-
-            $update = $this->pdo->prepare('
-                UPDATE wallets
-                SET balance_cents = :new_balance, updated_at = datetime("now")
-                WHERE id = :wid
-            ');
-            $update->execute([
-                ':new_balance' => $newBalance,
-                ':wid' => $walletId,
-            ]);
+            $newBalance = (int)$res;
+            $update->closeCursor();
+            $currentBalance = $newBalance + $amountCents;
 
             $txId = 'wtx_' . bin2hex(random_bytes(12));
             $now = date('Y-m-d H:i:s');
