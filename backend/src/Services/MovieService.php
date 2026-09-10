@@ -204,10 +204,12 @@ class MovieService
         }
 
         // Check partial match in known catalog
-        foreach (self::$KNOWN_MOVIES as $key => $movie) {
-            if (str_contains($normalizedKey, $key) || str_contains($key, $normalizedKey)) {
-                $movie['confidence_score'] = 0.85;
-                return $movie;
+        if (!empty($normalizedKey)) {
+            foreach (self::$KNOWN_MOVIES as $key => $movie) {
+                if (str_contains($normalizedKey, $key) || str_contains($key, $normalizedKey)) {
+                    $movie['confidence_score'] = 0.85;
+                    return $movie;
+                }
             }
         }
 
@@ -235,7 +237,8 @@ class MovieService
     public function scanUserMedia(string $userId, ?string $directoryId = null): array
     {
         $filesRes = $this->bigStore->listFiles('user', $userId, $directoryId);
-        $files = $filesRes['data']['files'] ?? $filesRes['files'] ?? [];
+        $raw = $filesRes['data'] ?? $filesRes;
+        $files = isset($raw['files']) && is_array($raw['files']) ? $raw['files'] : (is_array($raw) ? $raw : []);
 
         $scannedCount = 0;
         $addedCount = 0;
@@ -243,7 +246,7 @@ class MovieService
         $discovered = [];
 
         foreach ($files as $file) {
-            $name = $file['name'] ?? '';
+            $name = $file['original_name'] ?? $file['name'] ?? '';
             $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
             $mime = strtolower($file['mime_type'] ?? '');
 
@@ -422,7 +425,11 @@ class MovieService
         // Attach file details if possible
         try {
             $file = $this->bigStore->getFile($movie['file_id'], 'user', $movie['user_id']);
-            $movie['file'] = $file['data'] ?? $file;
+            $fileData = $file['data'] ?? $file;
+            if (is_array($fileData)) {
+                unset($fileData['storage_path'], $fileData['stored_name']);
+            }
+            $movie['file'] = $fileData;
         } catch (Exception $e) {
             $movie['file'] = null;
         }

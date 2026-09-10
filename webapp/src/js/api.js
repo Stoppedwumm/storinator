@@ -373,6 +373,40 @@ export class ApiClient {
     }
     return url;
   }
+
+  // Movie Mode & Streaming API methods (Spec Section 16-19)
+  listMovies(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.get(`/v1/movies${query ? '?' + query : ''}`);
+  }
+
+  getMovie(id) {
+    return this.get(`/v1/movies/${encodeURIComponent(id)}`);
+  }
+
+  scanMovies(directoryId = null) {
+    return this.post('/v1/movies/scan', directoryId ? { directory_id: directoryId } : {});
+  }
+
+  updateMovieMetadata(id, data) {
+    return this.post(`/v1/movies/${encodeURIComponent(id)}/metadata`, data);
+  }
+
+  deleteMovie(id) {
+    return this.delete(`/v1/movies/${encodeURIComponent(id)}`);
+  }
+
+  createMovieStreamToken(id) {
+    return this.post(`/v1/movies/${encodeURIComponent(id)}/stream-token`);
+  }
+
+  listMovieFolders() {
+    return this.get('/v1/movies/folders');
+  }
+
+  designateMovieFolder(directoryId) {
+    return this.post('/v1/movies/folders', { directory_id: directoryId });
+  }
 }
 
 export const api = new ApiClient();

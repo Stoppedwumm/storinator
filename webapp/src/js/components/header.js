@@ -26,6 +26,7 @@ export function renderHeader() {
           </a>
           ${user ? `
             <a href="#/files" style="color: var(--text-secondary); font-weight: 500;">Storage</a>
+            <a href="#/movies" style="color: var(--text-secondary); font-weight: 500;">Movies</a>
             <a href="#/subscriptions" style="color: var(--text-secondary); font-weight: 500;">Subscription</a>
             <a href="#/wallet" style="color: var(--text-secondary); font-weight: 500;">Wallet</a>
             ${(user.roles && (user.roles.includes('PARTNER') || user.roles.includes('ADMIN'))) ? `

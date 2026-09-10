@@ -13,6 +13,7 @@ use App\Controllers\SubscriptionController;
 use App\Controllers\WalletController;
 use App\Controllers\PartnerBillingController;
 use App\Controllers\ShareController;
+use App\Controllers\MovieController;
 use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
@@ -173,6 +174,31 @@ $router->get('/s/{token}/download', [ShareController::class, 'download']);
 $router->get('/api/v1/s/{token}/stream', [ShareController::class, 'stream']);
 $router->get('/api/s/{token}/stream', [ShareController::class, 'stream']);
 $router->get('/s/{token}/stream', [ShareController::class, 'stream']);
+
+// Movie Mode & Streaming Endpoints (Spec Phase 9 & Section 16-19)
+$router->get('/api/v1/movies', [MovieController::class, 'index'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/movies', [MovieController::class, 'index'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/movies/scan', [MovieController::class, 'scan'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/movies/scan', [MovieController::class, 'scan'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/movies/folders', [MovieController::class, 'addFolder'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/movies/folders', [MovieController::class, 'addFolder'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/movies/folders', [MovieController::class, 'listFolders'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/movies/folders', [MovieController::class, 'listFolders'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/movies/{id}', [MovieController::class, 'show'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/movies/{id}', [MovieController::class, 'show'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/v1/movies/{id}', [MovieController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->patch('/api/movies/{id}', [MovieController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/movies/{id}/metadata', [MovieController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/movies/{id}/metadata', [MovieController::class, 'update'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/movies/{id}', [MovieController::class, 'destroy'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/movies/{id}', [MovieController::class, 'destroy'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/movies/{id}/stream-token', [MovieController::class, 'createStreamToken'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/movies/{id}/stream-token', [MovieController::class, 'createStreamToken'], [[AuthMiddleware::class, 'handle']]);
+
+// Short-lived Media Stream Endpoints (Spec Section 19)
+$router->get('/api/v1/media/stream/{token}', [MovieController::class, 'streamMedia']);
+$router->get('/api/media/stream/{token}', [MovieController::class, 'streamMedia']);
+$router->get('/media/stream/{token}', [MovieController::class, 'streamMedia']);
 
 // Dispatch incoming request
 $router->dispatch($request);

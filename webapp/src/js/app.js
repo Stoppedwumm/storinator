@@ -22,6 +22,7 @@ import { renderSubscriptions } from './pages/subscriptions.js';
 import { renderWallet } from './pages/wallet.js';
 import { renderBilling } from './pages/billing.js';
 import { renderPublicShare } from './pages/share.js';
+import { renderMovies } from './pages/movies.js';
 
 import { store } from './state.js';
 import { auth } from './auth.js';
@@ -57,6 +58,7 @@ function initApp() {
     '/health': () => renderHealth(mainView),
     '/login': () => renderLogin(mainView),
     '/files': () => renderFiles(mainView),
+    '/movies': () => renderMovies(mainView),
     '/subscriptions': () => renderSubscriptions(mainView),
     '/wallet': () => renderWallet(mainView),
     '/billing': () => renderBilling(mainView),
