@@ -30,7 +30,12 @@ export class ApiClient {
       defaultHeaders['Authorization'] = `Bearer ${token}`;
     }
 
-    if (options.body && !(options.body instanceof FormData)) {
+    const isBinaryOrForm = options.body instanceof FormData || 
+                           options.body instanceof Blob || 
+                           options.body instanceof ArrayBuffer || 
+                           ArrayBuffer.isView(options.body);
+
+    if (options.body && !isBinaryOrForm) {
       defaultHeaders['Content-Type'] = 'application/json';
     }
 
@@ -43,7 +48,7 @@ export class ApiClient {
       credentials: 'same-origin',
     };
 
-    if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+    if (options.body && typeof options.body === 'object' && !isBinaryOrForm) {
       config.body = JSON.stringify(options.body);
     }
 
@@ -96,6 +101,11 @@ export class ApiClient {
     return this.post('/v1/entry/verify', { code });
   }
 
+  // Check entry unlocked status
+  getEntryStatus() {
+    return this.get('/v1/entry/status');
+  }
+
   // Authentication endpoints
   login(identifier, password) {
     return this.post('/v1/auth/login', { identifier, password });
@@ -124,6 +134,69 @@ export class ApiClient {
 
   pingAdmin() {
     return this.get('/v1/admin/ping');
+  }
+
+  // File and Storage APIs (Spec Phase 4)
+  getFiles(directoryId = null) {
+    const query = directoryId ? `?directory_id=${encodeURIComponent(directoryId)}` : '';
+    return this.get(`/v1/files${query}`);
+  }
+
+  createDirectory(name, parentId = null) {
+    return this.post('/v1/directories', { name, parent_id: parentId });
+  }
+
+  deleteDirectory(id) {
+    return this.delete(`/v1/directories/${encodeURIComponent(id)}`);
+  }
+
+  initUpload(payload) {
+    return this.post('/v1/files/upload/init', payload);
+  }
+
+  uploadChunk(uploadId, chunkIndex, chunkBlob) {
+    return this.request(`/v1/files/upload/${encodeURIComponent(uploadId)}/chunk/${chunkIndex}`, {
+      method: 'PUT',
+      body: chunkBlob,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+      },
+    });
+  }
+
+  finalizeUpload(uploadId, expectedSha256 = null) {
+    return this.post(`/v1/files/upload/${encodeURIComponent(uploadId)}/finalize`, {
+      expected_sha256: expectedSha256,
+    });
+  }
+
+  directUpload(file, directoryId = null) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (directoryId) {
+      formData.append('directory_id', directoryId);
+    }
+    return this.post('/v1/files/upload', formData);
+  }
+
+  getFile(id) {
+    return this.get(`/v1/files/${encodeURIComponent(id)}`);
+  }
+
+  deleteFile(id) {
+    return this.delete(`/v1/files/${encodeURIComponent(id)}`);
+  }
+
+  getStorageQuota() {
+    return this.get('/v1/storage/quota');
+  }
+
+  getFileDownloadUrl(id) {
+    return `${this.baseUrl}/v1/files/${encodeURIComponent(id)}/download`;
+  }
+
+  getFileStreamUrl(id) {
+    return `${this.baseUrl}/v1/files/${encodeURIComponent(id)}/stream`;
   }
 }
 

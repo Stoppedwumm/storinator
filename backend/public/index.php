@@ -6,6 +6,7 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 use App\Controllers\AuthController;
 use App\Controllers\EntryController;
+use App\Controllers\FileController;
 use App\Controllers\HealthController;
 use App\Controllers\RoleTestController;
 use App\Core\Config;
@@ -44,6 +45,10 @@ $router->get('/api/v1/health', [HealthController::class, 'check']);
 
 // Secret teaser entry-code endpoint (Spec Section 32 & 41)
 $router->post('/api/v1/entry/verify', [EntryController::class, 'verify']);
+$router->post('/api/entry/verify', [EntryController::class, 'verify']);
+$router->post('/api/entry-code', [EntryController::class, 'verify']);
+$router->get('/api/v1/entry/status', [EntryController::class, 'status']);
+$router->get('/api/entry/status', [EntryController::class, 'status']);
 
 // Authentication Endpoints (Spec Section 30 & 40)
 $router->post('/api/v1/auth/login', [AuthController::class, 'login']);
@@ -75,6 +80,23 @@ $router->get('/api/v1/admin/users', [RoleTestController::class, 'listUsers'], [
     [AuthMiddleware::class, 'handle'],
     RoleMiddleware::requireAdmin(),
 ]);
+
+// File & Storage Endpoints (Spec Phase 4 & Section 15, 39, 42)
+$router->get('/api/v1/files', [FileController::class, 'list'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/files/upload/init', [FileController::class, 'initUpload'], [[AuthMiddleware::class, 'handle']]);
+$router->put('/api/v1/files/upload/{id}/chunk/{index}', [FileController::class, 'uploadChunk'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/files/upload/{id}/chunk/{index}', [FileController::class, 'uploadChunk'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/files/upload/{id}/finalize', [FileController::class, 'finalizeUpload'], [[AuthMiddleware::class, 'handle']]);
+$router->post('/api/v1/files/upload', [FileController::class, 'directUpload'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/files/{id}', [FileController::class, 'show'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/files/{id}/download', [FileController::class, 'download'], [[AuthMiddleware::class, 'handle']]);
+$router->get('/api/v1/files/{id}/stream', [FileController::class, 'stream'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/files/{id}', [FileController::class, 'delete'], [[AuthMiddleware::class, 'handle']]);
+
+$router->post('/api/v1/directories', [FileController::class, 'createDirectory'], [[AuthMiddleware::class, 'handle']]);
+$router->delete('/api/v1/directories/{id}', [FileController::class, 'deleteDirectory'], [[AuthMiddleware::class, 'handle']]);
+
+$router->get('/api/v1/storage/quota', [FileController::class, 'quota'], [[AuthMiddleware::class, 'handle']]);
 
 // Dispatch incoming request
 $router->dispatch($request);

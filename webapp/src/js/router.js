@@ -17,11 +17,31 @@ export class Router {
   }
 
   resolve() {
-    const hash = window.location.hash.slice(1) || '/';
-    const handler = this.routes[hash] || this.routes['/'];
+    const rawHash = window.location.hash.slice(1) || '/';
+
+    // Support section anchor links on landing page (#infrastructure, etc.)
+    if (rawHash && !rawHash.startsWith('/')) {
+      const el = document.getElementById(rawHash);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      if (this.currentRoute !== '/') {
+        this.currentRoute = '/';
+        if (this.routes['/']) this.routes['/']();
+        setTimeout(() => {
+          const target = document.getElementById(rawHash);
+          if (target) target.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
+        return;
+      }
+    }
+
+    const handler = this.routes[rawHash] || this.routes['/'];
     if (handler) {
-      this.currentRoute = hash;
+      this.currentRoute = rawHash;
       handler();
+      window.scrollTo(0, 0);
     }
   }
 

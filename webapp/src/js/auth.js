@@ -40,6 +40,23 @@ export const auth = {
     return res;
   },
 
+  async checkEntryStatus() {
+    try {
+      const res = await api.getEntryStatus();
+      if (res && res.unlocked) {
+        store.set({ entryUnlocked: true });
+        return true;
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  },
+
+  isEntryUnlocked() {
+    return store.get().entryUnlocked === true || this.isAuthenticated();
+  },
+
   async logout() {
     try {
       await api.logout();

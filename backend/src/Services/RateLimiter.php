@@ -28,6 +28,35 @@ class RateLimiter
         return ((int) $stmt->fetchColumn()) >= self::MAX_ATTEMPTS;
     }
 
+    public function isEntryRateLimited(string $ip, int $maxAttempts = 5, int $windowMinutes = 5): bool
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare('
+            SELECT COUNT(*) FROM login_attempts
+            WHERE identifier = "entry_code"
+              AND ip_address = :ip
+              AND attempted_at >= datetime("now", "-' . $windowMinutes . ' minutes")
+        ');
+        $stmt->execute([':ip' => $ip]);
+
+        return ((int) $stmt->fetchColumn()) >= $maxAttempts;
+    }
+
+    public function recordEntryAttempt(string $ip): void
+    {
+        $this->recordFailedAttempt('entry_code', $ip);
+    }
+
+    public function clearEntryAttempts(string $ip): void
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare('
+            DELETE FROM login_attempts
+            WHERE identifier = "entry_code" AND ip_address = :ip
+        ');
+        $stmt->execute([':ip' => $ip]);
+    }
+
     public function recordFailedAttempt(string $identifier, string $ip): void
     {
         $pdo = Database::getConnection();

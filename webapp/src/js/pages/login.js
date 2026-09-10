@@ -61,6 +61,13 @@ function renderAuthenticatedView(container, user) {
           <div id="role-test-result" style="margin-top: 1rem; display: none;"></div>
         </div>
 
+        <div style="margin-bottom: 1.5rem; text-align: center;">
+          <a href="#/files" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; padding: 0.6rem 1.5rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            Open BigStore File Manager &rarr;
+          </a>
+        </div>
+
         <div style="text-align: center;">
           <a href="#/" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Return to public site</a>
         </div>

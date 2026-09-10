@@ -20,6 +20,13 @@ BASE_URL="${BASE_URL:-http://localhost:8080/api}"
 PASSED=0
 FAILED=0
 
+# Ensure clean slate for test runner IP
+docker compose exec -T backend php -r "
+    require 'vendor/autoload.php';
+    use App\Core\Database;
+    Database::getConnection()->exec('DELETE FROM login_attempts');
+" >/dev/null 2>&1 || true
+
 red() { echo -e "\033[31m$1\033[0m"; }
 green() { echo -e "\033[32m$1\033[0m"; }
 cyan() { echo -e "\033[36m$1\033[0m"; }
@@ -178,6 +185,11 @@ BLOCKED_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/v1/auth
   -H "Content-Type: application/json" \
   -d "{\"identifier\":\"$TARGET_USER\",\"password\":\"wrong\"}")
 assert_eq "$BLOCKED_CODE" "429" "Rate limit 429"
+docker compose exec -T backend php -r "
+    require 'vendor/autoload.php';
+    use App\Core\Database;
+    Database::getConnection()->exec('DELETE FROM login_attempts');
+" >/dev/null 2>&1 || true
 
 cyan "========================================================"
 cyan "    Phase 2 Authentication Results: $PASSED passed, $FAILED failed"

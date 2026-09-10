@@ -94,6 +94,11 @@ class Request
         return $this->body[$key] ?? $default;
     }
 
+    public function getRawBody(): string
+    {
+        return $this->rawBody;
+    }
+
     public function getCookie(string $name, ?string $default = null): ?string
     {
         return $this->cookies[$name] ?? $default;
